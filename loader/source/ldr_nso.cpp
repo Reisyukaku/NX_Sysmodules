@@ -13,6 +13,21 @@ static bool g_nso_present[NSO_NUM_MAX] = {0};
 
 static char g_nso_path[FS_MAX_PATH] = {0};
 
+/* NSO patches */
+static NsoUtils::NsoPatch es_nosig_500[] =
+{
+    { 0x5C30, 4, "\xE0\x00\x00\x34", "\x07\x00\x00\x14" },
+    { 0xBE79, 4, "\xE0\x01\x00\x03", "\x1F\x20\x03\xD5" },
+    { 0xBF3C, 4, "\x35\xC1\x88\x9A", "\xF5\x03\x1F\xAA" },
+    { 0, 0, NULL, NULL }
+};
+
+static NsoUtils::NsoPatchId patchid_list[] = 
+{
+    { 0x0100000000000033, { 0xF6, 0x07, 0x5E, 0x0D, 0x39, 0x75, 0xDA, 0xD1, 0xDB, 0x73, 0x0D, 0x18, 0x78, 0xA1, 0x4A, 0xE6 }, 1, 0, es_nosig_500},
+    { 0, { }, 0, 0, NULL }
+};
+
 FILE *NsoUtils::OpenNsoFromExeFS(unsigned int index) {
     std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
     snprintf(g_nso_path, FS_MAX_PATH, "code:/%s", NsoUtils::GetNsoFileName(index));
@@ -74,7 +89,7 @@ Result NsoUtils::LoadNsoHeaders(u64 title_id) {
             }
             g_nso_present[i] = true;
             fclose(f_nso);
-            f_nso = NULL;
+            f_nso = NULL; 
             continue;
         }
         if (1 < i && i < 12) {
@@ -280,6 +295,9 @@ Result NsoUtils::LoadNsosIntoProcessMemory(Handle process_h, u64 title_id, NsoLo
             /* Zero out .bss. */
             u64 bss_base = rw_start + g_nso_headers[i].segments[2].decomp_size, bss_size = g_nso_headers[i].segments[2].align_or_total_size;
             std::fill(map_base + bss_base, map_base + bss_base + bss_size, 0);
+
+            /* Apply NSO patches */
+            PatchNsoInProcessMemory(title_id, i, map_base);
             
             nso_map.Close();
             
@@ -320,4 +338,27 @@ Result NsoUtils::LoadNsosIntoProcessMemory(Handle process_h, u64 title_id, NsoLo
     }
     
     return rc;
+}
+
+void NsoUtils::PatchNsoInProcessMemory(u64 title_id, unsigned int index, u8 *map_base)
+{
+    /* Look for any patches that match this title_id */
+    for (int i = 0; patchid_list[i].title_id; i++)
+    {
+        unsigned int section = patchid_list[i].section;
+
+        if (patchid_list[i].title_id == title_id &&
+            memcmp(patchid_list[i].sha256, g_nso_headers[index].section_hashes[section], 16) == 0)
+        {
+            for (int j = 0; patchid_list[i].patchlist[j].offset_from_section; j++)
+            {
+                NsoPatch *patch = &patchid_list[i].patchlist[j];
+                u32 offset = g_nso_headers[i].segments[section].dst_offset + patch->offset_from_section;
+                if (memcmp(map_base + offset, patch->source, patch->length) == 0)
+                {
+                    memcpy(map_base + offset, patch->patch, patch->length);
+                }
+            }
+        }
+    }
 }

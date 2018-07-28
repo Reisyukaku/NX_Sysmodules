@@ -43,7 +43,21 @@ class NsoUtils {
             u8  _0x8[0x18];
             u8  arguments[];
         };
-        
+
+        struct NsoPatch {
+            u32 offset_from_section;
+            u32 length;
+            const char *source;
+            const char *patch;
+        };
+
+        struct NsoPatchId {
+            u64 title_id;
+            u8 sha256[16];
+            unsigned int index;
+            unsigned int section;
+            NsoPatch *patchlist;
+        };
         
         static_assert(sizeof(NsoHeader) == 0x100, "Incorrectly defined NsoHeader!");
         
@@ -94,4 +108,6 @@ class NsoUtils {
         
         static Result LoadNsoSegment(u64 title_id, unsigned int index, unsigned int segment, FILE *f_nso, u8 *map_base, u8 *map_end);
         static Result LoadNsosIntoProcessMemory(Handle process_h, u64 title_id, NsoLoadExtents *extents, u8 *args, u32 args_size);
+
+        static void PatchNsoInProcessMemory(u64 title_id, unsigned int index, u8 *map_base);
 };

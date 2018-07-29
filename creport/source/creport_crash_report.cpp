@@ -204,7 +204,7 @@ bool CrashReport::GetCurrentTime(u64 *out) {
 
 void CrashReport::EnsureReportDirectories() {
     char path[FS_MAX_PATH];  
-    strcpy(path, "sdmc:/atmosphere");
+    strcpy(path, "sdmc:/ReiNX");
     mkdir(path, S_IRWXU);
     strcat(path, "/crash reports");
     mkdir(path, S_IRWXU);
@@ -226,7 +226,7 @@ void CrashReport::SaveReport() {
     }
     
     /* Open report file. */
-    snprintf(report_path, sizeof(report_path) - 1, "sdmc:/atmosphere/crash reports/%011lu_%016lx.log", timestamp, process_info.title_id);
+    snprintf(report_path, sizeof(report_path) - 1, "sdmc:/ReiNX/crash reports/%011lu_%016lx.log", timestamp, process_info.title_id);
     FILE *f_report = fopen(report_path, "w");
     if (f_report == NULL) {
         return;
@@ -235,7 +235,7 @@ void CrashReport::SaveReport() {
     fclose(f_report);
     
     /* Dump threads. */
-    snprintf(report_path, sizeof(report_path) - 1, "sdmc:/atmosphere/crash reports/dumps/%011lu_%016lx_thread_info.bin", timestamp, process_info.title_id);
+    snprintf(report_path, sizeof(report_path) - 1, "sdmc:/ReiNX/crash reports/dumps/%011lu_%016lx_thread_info.bin", timestamp, process_info.title_id);
     f_report = fopen(report_path, "wb");
     this->thread_list.DumpBinary(f_report, this->crashed_thread_info.GetId());
     fclose(f_report);

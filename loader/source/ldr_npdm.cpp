@@ -23,7 +23,7 @@ FILE *NpdmUtils::OpenNpdmFromExeFS() {
 
 FILE *NpdmUtils::OpenNpdmFromSdCard(u64 title_id) {  
     std::fill(g_npdm_path, g_npdm_path + FS_MAX_PATH, 0);
-    snprintf(g_npdm_path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/exefs/main.npdm", title_id);
+    snprintf(g_npdm_path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/exefs/main.npdm", title_id);
     return fopen(g_npdm_path, "rb");
 }
 

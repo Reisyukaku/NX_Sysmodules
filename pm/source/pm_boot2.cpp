@@ -139,14 +139,14 @@ void EmbeddedBoot2::Main() {
     }
     
     /* Allow for user-customizable programs. */
-    DIR *titles_dir = opendir("sdmc:/atmosphere/titles");
+    DIR *titles_dir = opendir("sdmc:/ReiNX/titles");
     struct dirent *ent;
     if (titles_dir != NULL) {
         while ((ent = readdir(titles_dir)) != NULL) {
             if (strlen(ent->d_name) == 0x10 && IsHexadecimal(ent->d_name)) {
                 u64 title_id = strtoul(ent->d_name, NULL, 16);
                 char title_path[FS_MAX_PATH] = {0};
-                strcpy(title_path, "sdmc:/atmosphere/titles/");
+                strcpy(title_path, "sdmc:/ReiNX/titles/");
                 strcat(title_path, ent->d_name);
                 strcat(title_path, "/boot2.flag");
                 FILE *f_flag = fopen(title_path, "rb");

@@ -22,13 +22,13 @@ FILE *NsoUtils::OpenNsoFromExeFS(unsigned int index) {
 
 FILE *NsoUtils::OpenNsoFromSdCard(unsigned int index, u64 title_id) {  
     std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
-    snprintf(g_nso_path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/exefs/%s", title_id, NsoUtils::GetNsoFileName(index));
+    snprintf(g_nso_path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/exefs/%s", title_id, NsoUtils::GetNsoFileName(index));
     return fopen(g_nso_path, "rb");
 }
 
 bool NsoUtils::CheckNsoStubbed(unsigned int index, u64 title_id) {
     std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
-    snprintf(g_nso_path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/exefs/%s.stub", title_id, NsoUtils::GetNsoFileName(index));
+    snprintf(g_nso_path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/exefs/%s.stub", title_id, NsoUtils::GetNsoFileName(index));
     FILE *f = fopen(g_nso_path, "rb");
     bool ret = (f != NULL);
     if (ret) {

@@ -4,7 +4,7 @@
 
 #include "ldr_nso.hpp"
 
-class PatchUtils {  
+class Patcher {  
     public:
-        static void ApplyPatches(const NsoUtils::NsoHeader *header, u8 *mapped_nso, size_t size);
+        static void ApplyPatches(u64 title_id, u8 *mapped_nso, size_t size);
 };

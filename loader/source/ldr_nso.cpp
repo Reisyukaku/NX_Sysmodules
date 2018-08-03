@@ -228,7 +228,6 @@ Result NsoUtils::LoadNsoSegment(u64 title_id, unsigned int index, unsigned int s
             return 0xA09;
         }
     }
-
     
     if (check_hash) {
         u8 hash[0x20] = {0};

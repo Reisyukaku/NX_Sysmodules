@@ -1,6 +1,4 @@
-KIPS := loader pm sm boot
-
-#TODO: boot2 ?
+KIPS := loader sm fs_mitm
 
 SUBFOLDERS := libstratosphere $(KIPS)
 

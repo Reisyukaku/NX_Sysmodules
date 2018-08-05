@@ -51,8 +51,7 @@ void __appInit(void) {
     rc = fsInitialize();
     if (R_FAILED(rc)) {
         fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
-    }
-        
+    } 
     
     rc = lrInitialize();
     if (R_FAILED(rc))  {

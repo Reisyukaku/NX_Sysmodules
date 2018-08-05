@@ -6,6 +6,7 @@
 
 static NpdmUtils::NpdmCache g_npdm_cache = {0};
 static char g_npdm_path[FS_MAX_PATH] = {0};
+static bool hidOverride = false;
 
 Result NpdmUtils::LoadNpdmFromCache(u64 tid, NpdmInfo *out) {
     if (g_npdm_cache.info.title_id != tid) {
@@ -29,7 +30,16 @@ FILE *NpdmUtils::OpenNpdmFromSdCard(u64 title_id) {
 
 
 FILE *NpdmUtils::OpenNpdm(u64 title_id) {
-    FILE *f_out = OpenNpdmFromSdCard(title_id);
+    u64 kDown = 0;
+    if (hidOverride){
+        hidInitialize();
+        hidScanInput();
+        kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+        hidExit();
+    }
+    if (title_id == 0x0100000000001000) 
+        hidOverride = true;
+    FILE *f_out = !(kDown & KEY_R) ? OpenNpdmFromSdCard(title_id) : NULL;
     if (f_out != NULL) {
         return f_out;
     }

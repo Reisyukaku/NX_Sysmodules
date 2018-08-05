@@ -13,6 +13,7 @@ static NsoUtils::NsoHeader g_nso_headers[NSO_NUM_MAX] = {0};
 static bool g_nso_present[NSO_NUM_MAX] = {0};
 
 static char g_nso_path[FS_MAX_PATH] = {0};
+static bool hidOverride = false;
 
 FILE *NsoUtils::OpenNsoFromExeFS(unsigned int index) {
     std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
@@ -38,7 +39,16 @@ bool NsoUtils::CheckNsoStubbed(unsigned int index, u64 title_id) {
 }
 
 FILE *NsoUtils::OpenNso(unsigned int index, u64 title_id) {
-    FILE *f_out = OpenNsoFromSdCard(index, title_id);
+    u64 kDown = 0;
+    if (hidOverride){
+        hidInitialize();
+        hidScanInput();
+        kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+        hidExit();
+    }
+    if (title_id == 0x0100000000001000) 
+        hidOverride = true;
+    FILE *f_out = !(kDown & KEY_R) ? OpenNsoFromSdCard(index, title_id) : NULL;
     if (f_out != NULL) {
         return f_out;
     } else if (CheckNsoStubbed(index, title_id)) {

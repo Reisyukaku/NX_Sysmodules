@@ -1,3 +1,4 @@
 **/*.elf
 **/*.kip
+**/*.nso
 **/build

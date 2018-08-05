@@ -29,11 +29,34 @@ FILE *NpdmUtils::OpenNpdmFromSdCard(u64 title_id) {
 
 
 FILE *NpdmUtils::OpenNpdm(u64 title_id) {
-    FILE *f_out = OpenNpdmFromSdCard(title_id);
-    if (f_out != NULL) {
-        return f_out;
+    if (title_id == 0x010000000000100D) {
+        Result rc;
+        rc = hidInitialize();
+        if (R_FAILED(rc)){
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));
+        }
+        hidScanInput();
+        u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+        if(kDown & KEY_R) {
+            hidExit();
+            FILE *f_out = OpenNpdmFromSdCard(title_id);
+            if (f_out != NULL) {
+                return f_out;
+            }
+            return OpenNpdmFromExeFS();
+        }
+        else {
+            hidExit();
+            return OpenNpdmFromExeFS();
+        }
     }
-    return OpenNpdmFromExeFS();
+    else {
+        FILE *f_out = OpenNpdmFromSdCard(title_id);
+        if (f_out != NULL) {
+            return f_out;
+        }
+        return OpenNpdmFromExeFS();
+    }
 }
 
 Result NpdmUtils::LoadNpdm(u64 tid, NpdmInfo *out) {

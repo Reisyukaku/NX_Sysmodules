@@ -38,13 +38,39 @@ bool NsoUtils::CheckNsoStubbed(unsigned int index, u64 title_id) {
 }
 
 FILE *NsoUtils::OpenNso(unsigned int index, u64 title_id) {
-    FILE *f_out = OpenNsoFromSdCard(index, title_id);
-    if (f_out != NULL) {
-        return f_out;
-    } else if (CheckNsoStubbed(index, title_id)) {
-        return NULL;
-    } else {
-        return OpenNsoFromExeFS(index);
+    if (title_id == 0x010000000000100D) {
+        Result rc;
+        rc = hidInitialize();
+        if (R_FAILED(rc)){
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));
+        }
+        hidScanInput();
+        u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+        if(kDown & KEY_R) {
+            hidExit();
+            FILE *f_out = OpenNsoFromSdCard(index, title_id);
+            if (f_out != NULL) {
+                return f_out;
+            } else if (CheckNsoStubbed(index, title_id)) {
+                return NULL;
+            } else {
+                return OpenNsoFromExeFS(index);
+            }
+        }
+        else { 
+            hidExit();
+            return OpenNsoFromExeFS(index); 
+        }
+    }
+    else {        
+        FILE *f_out = OpenNsoFromSdCard(index, title_id);
+        if (f_out != NULL) {
+            return f_out;
+        } else if (CheckNsoStubbed(index, title_id)) {
+            return NULL;
+        } else {
+            return OpenNsoFromExeFS(index);
+        }
     }
 }
 

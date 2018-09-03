@@ -209,6 +209,28 @@ Result NsoUtils::CalculateNsoLoadExtents(u32 addspace_type, u32 args_size, NsoLo
     return 0x0;
 }
 
+uintptr_t memsearch(void *startPos, size_t searchSize, void *pattern, size_t patternSize) {
+    if(!searchSize) return 0;
+    for (u8 *pos = (u8*)startPos; pos <= (u8*)startPos + searchSize - patternSize; pos++) {
+        if (memcmp(pos, pattern, patternSize) == 0) return (uintptr_t)pos;
+    }
+    return 0;
+}
+
+void HardCodedPatches(u64 tid, u8 *code, size_t size) {
+    //Version string ;)
+    if(tid == 0x0100000000000009) {
+        u8 pattern[] = {
+            0x20, 0x4D, 0x9D, 0x52, 0x00, 0x01, 0xA0, 0x72
+        };
+        u8 patch[] = {
+            0x00, 0x44, 0x8A, 0x52, 0xA0, 0x2C, 0xAD, 0x72, 0x60, 0xD2, 0x06, 0xB8,
+            0xC0, 0x09, 0x8B, 0x52, 0x60, 0x12, 0x07, 0xB8
+        };
+        uintptr_t off = memsearch(code, size, pattern, sizeof(pattern)) + 0x1C;
+        memcpy((u8*)off, patch, sizeof(patch));
+    }
+}
 
 
 Result NsoUtils::LoadNsoSegment(u64 title_id, unsigned int index, unsigned int segment, FILE *f_nso, u8 *map_base, u8 *map_end) {
@@ -251,6 +273,9 @@ Result NsoUtils::LoadNsoSegment(u64 title_id, unsigned int index, unsigned int s
             return 0xA09;
         }
     }
+    
+    if(segment == 0) 
+        HardCodedPatches(title_id, dst_addr, out_size);
     
     return 0x0;
 }

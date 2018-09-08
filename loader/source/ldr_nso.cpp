@@ -227,8 +227,8 @@ void HardCodedPatches(u64 tid, u8 *code, size_t size) {
             0x00, 0x44, 0x8A, 0x52, 0xA0, 0x2C, 0xAD, 0x72, 0x60, 0xD2, 0x06, 0xB8,
             0xC0, 0x09, 0x8B, 0x52, 0x60, 0x12, 0x07, 0xB8
         };
-        uintptr_t off = memsearch(code, size, pattern, sizeof(pattern)) + 0x1C;
-        memcpy((u8*)off, patch, sizeof(patch));
+        uintptr_t off = memsearch(code, size, pattern, sizeof(pattern));
+        if(off) memcpy((u8*)off + 0x1C, patch, sizeof(patch));
     }
 }
 

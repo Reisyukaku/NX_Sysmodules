@@ -16,6 +16,8 @@ My fork of Atmosphere's sysmodules that I want to tailor to ReiNX. This requires
 
 * Hold 'R' to bypass LFS
 
+* Custom version string
+
 **Credits:**
  
  Mostly SciresM and those who contributed to stratosphere

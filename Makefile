@@ -1,4 +1,4 @@
-KIPS := loader sm
+KIPS := loader sm fs_mitm pm
 
 SUBFOLDERS := libstratosphere $(KIPS)
 

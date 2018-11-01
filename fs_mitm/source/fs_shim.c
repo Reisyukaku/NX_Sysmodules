@@ -96,7 +96,7 @@ Result fsOpenDataStorageByCurrentProcessFromDomainFwd(Service* s, u32 *out_objec
 
     if (R_SUCCEEDED(rc)) {
         IpcParsedCommand r;
-        ipcParseForDomain(&r);
+        ipcParseDomainRequest(&r);
 
         struct {
             u64 magic;
@@ -176,7 +176,7 @@ Result fsOpenDataStorageByDataIdFromDomain(Service* s, FsStorageId storage_id, u
 
     if (R_SUCCEEDED(rc)) {
         IpcParsedCommand r;
-        ipcParseForDomain(&r);
+        ipcParseDomainRequest(&r);
 
         struct {
             u64 magic;

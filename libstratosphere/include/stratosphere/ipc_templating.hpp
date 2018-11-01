@@ -510,7 +510,7 @@ Result WrapIpcCommandImpl(Class *this_ptr, IpcParsedCommand& r, IpcCommand &out_
     auto args = Decoder<OutArgs, InArgsWithoutThis>::Decode(r, out_command, pointer_buffer);    
     auto result = std::apply( [=](auto&&... args) { return (this_ptr->*IpcCommandImpl)(args...); }, args);
     DomainOwner *down = NULL;
-    if (r.IsDomainMessage) {
+    if (r.IsDomainResponse) {
         down = this_ptr->get_owner();
     }
     

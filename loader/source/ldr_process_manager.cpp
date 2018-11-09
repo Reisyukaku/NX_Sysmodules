@@ -37,6 +37,11 @@ std::tuple<Result, MovedHandle> ProcessManagerService::create_process(u64 flags,
     
     fprintf(stderr, "CreateProcess(%016lx, %016lx, %08x);\n", flags, index, reslimit_h.handle);
     
+    ON_SCOPE_EXIT {
+        /* Loader doesn't persist the copied resource limit handle. */
+        svcCloseHandle(reslimit_h.handle);
+    };
+    
     rc = Registration::GetRegisteredTidSid(index, &tid_sid);
     if (R_FAILED(rc)) {
         return {rc, MovedHandle{process_h}};

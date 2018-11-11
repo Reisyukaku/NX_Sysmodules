@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <stratosphere.hpp>
 
@@ -166,7 +182,12 @@ void ResourceLimitUtils::InitializeLimits() {
     /* Atmosphere: Allocate extra memory (24 MiB) to SYSTEM away from Applet. */
     for (unsigned int i = 0; i < 6; i++) {
         g_memory_resource_limits[i][0] += ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
-        g_memory_resource_limits[i][2] -= ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
+        /* On < 4.0.0, taking from application instead of applet fixes a rare hang on boot. */
+        if (kernelAbove400()) {
+            g_memory_resource_limits[i][2] -= ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
+        } else {
+            g_memory_resource_limits[i][1] -= ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
+        }
     }
 
     /* Set resource limits. */
@@ -206,6 +227,10 @@ Handle ResourceLimitUtils::GetResourceLimitHandle(u16 application_type) {
     } else {
         return g_resource_limit_handles[2 * ((application_type & 3) == 2)];
     }
+}
+
+Handle ResourceLimitUtils::GetResourceLimitHandleByCategory(ResourceLimitCategory category) {
+    return g_resource_limit_handles[category];
 }
 
 Result ResourceLimitUtils::BoostSystemMemoryResourceLimit(u64 boost_size) {

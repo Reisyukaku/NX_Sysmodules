@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <stratosphere.hpp>
 
@@ -30,6 +46,11 @@ LayeredRomFS::LayeredRomFS(std::shared_ptr<RomInterfaceStorage> s_r, std::shared
 
 
 Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
+    /* Size zero reads should always succeed. */
+    if (size == 0) {
+        return 0;
+    }
+    
     /* Validate size. */
     u64 virt_size = (*this->p_source_infos)[this->p_source_infos->size() - 1].virtual_offset + (*this->p_source_infos)[this->p_source_infos->size() - 1].size;
     if (offset >= virt_size) {
@@ -67,6 +88,22 @@ Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
                 cur_read_size = cur_source->size - (offset - cur_source->virtual_offset);
             }
             switch (cur_source->type) {
+                case RomFSDataSource::MetaData:
+                    {
+                        FsFile file;
+                        if (R_FAILED((rc = Utils::OpenSdFileForReiNX(this->title_id, ROMFS_METADATA_FILE_PATH, FS_OPEN_READ, &file)))) {
+                            fatalSimple(rc);
+                        }
+                        size_t out_read;
+                        if (R_FAILED((rc = fsFileRead(&file, (offset - cur_source->virtual_offset), (void *)((uintptr_t)buffer + read_so_far), cur_read_size, &out_read)))) {
+                            fatalSimple(rc);
+                        }
+                        if (out_read != cur_read_size) {
+                            Reboot();
+                        }
+                        fsFileClose(&file);
+                    }
+                    break;
                 case RomFSDataSource::LooseFile:
                     {
                         FsFile file;
@@ -108,12 +145,14 @@ Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
                     fatalSimple(0xF601);
             }
             read_so_far += cur_read_size;
+            offset += cur_read_size;
         } else {
             /* Handle padding explicitly. */
             cur_source_ind++;
             /* Zero out the padding we skip, here. */
-            memset((void *)((uintptr_t)buffer + read_so_far), 0, ((*this->p_source_infos)[cur_source_ind]).virtual_offset - (cur_source->virtual_offset + cur_source->size));
-            read_so_far += ((*this->p_source_infos)[cur_source_ind]).virtual_offset - (cur_source->virtual_offset + cur_source->size);
+            memset((void *)((uintptr_t)buffer + read_so_far), 0, ((*this->p_source_infos)[cur_source_ind]).virtual_offset - offset);
+            read_so_far += ((*this->p_source_infos)[cur_source_ind]).virtual_offset - offset;
+            offset = ((*this->p_source_infos)[cur_source_ind]).virtual_offset;
         }
     }
     

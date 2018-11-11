@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
@@ -24,7 +40,6 @@ extern "C" {
     void __appExit(void);
 }
 
-
 void __libnx_initheap(void) {
 	void*  addr = nx_inner_heap;
 	size_t size = nx_inner_heap_size;
@@ -47,13 +62,13 @@ void __appExit(void) {
 
 int main(int argc, char **argv)
 {
-    consoleDebugInit(debugDevice_SVC);
+    //consoleDebugInit(debugDevice_SVC);
     
     /* TODO: What's a good timeout value to use here? */
-    WaitableManager *server_manager = new WaitableManager(U64_MAX);
-        
+    auto server_manager = new WaitableManager(1);
+            
     /* Create sm:, (and thus allow things to register to it). */
-    server_manager->add_waitable(new ManagedPortServer<UserService>("sm:", 0x40));
+    server_manager->AddWaitable(new ManagedPortServer<UserService>("sm:", 0x40));
         
     /* Create sm:m manually. */
     Handle smm_h;
@@ -62,10 +77,10 @@ int main(int argc, char **argv)
         while (1) { }
     }
     
-    server_manager->add_waitable(new ExistingPortServer<ManagerService>(smm_h, 1));
-    
+    server_manager->AddWaitable(new ExistingPortServer<ManagerService>(smm_h, 1));
+        
     /* Loop forever, servicing our services. */
-    server_manager->process();
+    server_manager->Process();
     
     /* Cleanup. */
     delete server_manager;

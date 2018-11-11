@@ -15,6 +15,8 @@
  */
  
 #pragma once
+struct SmServiceName {
+    char name[sizeof(u64)];
+};
 
-void Reboot();
-void Log(const void *data, int size);
+static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");

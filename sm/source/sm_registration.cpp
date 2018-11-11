@@ -1,6 +1,22 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <algorithm>
-#include <stratosphere/servicesession.hpp>
+#include <stratosphere.hpp>
 #include "sm_registration.hpp"
 #include "meta_tools.hpp"
 
@@ -10,6 +26,7 @@ static std::array<Registration::Service, REGISTRATION_LIST_MAX_SERVICE> g_servic
 static u64 g_initial_process_id_low = 0;
 static u64 g_initial_process_id_high = 0;
 static bool g_determined_initial_process_ids = false;
+static bool g_end_init_defers = false;
 
 u64 GetServiceNameLength(u64 service) {
     u64 service_name_len = 0;
@@ -18,6 +35,38 @@ u64 GetServiceNameLength(u64 service) {
         service >>= 8;
     }
     return service_name_len;
+}
+
+/* Atmosphere extension utilities. */
+void Registration::EndInitDefers() {
+    g_end_init_defers = true;
+}
+
+constexpr u64 EncodeNameConstant(const char *name) {
+    u64 service = 0;
+    for (unsigned int i = 0; i < sizeof(service); i++) {
+        if (name[i] == '\x00') {
+            break;
+        }
+        service |= ((u64)name[i]) << (8 * i);
+    }
+    return service;
+}
+
+bool Registration::ShouldInitDefer(u64 service) {
+    /* Only enable if compile-time generated. */
+#ifndef SM_ENABLE_INIT_DEFERS
+    return false;
+#endif
+
+    if (g_end_init_defers) {
+        return false;
+    }
+    
+    /* This is a mechanism by which certain services will always be deferred until sm:m receives a special command. */
+    /* This can be extended with more services as needed at a later date. */
+    constexpr u64 FSP_SRV = EncodeNameConstant("fsp-srv");
+    return service == FSP_SRV;
 }
 
 /* Utilities. */
@@ -172,10 +221,12 @@ bool Registration::HasService(u64 service) {
 
 Result Registration::GetServiceHandle(u64 pid, u64 service, Handle *out) {
     Registration::Service *target_service = GetService(service);
-    if (target_service == NULL) {
+    if (target_service == NULL || ShouldInitDefer(service)) {
         /* Note: This defers the result until later. */
         return RESULT_DEFER_SESSION;
     }
+    
+    /* */
     
     *out = 0;
     Result rc;
@@ -199,7 +250,7 @@ Result Registration::GetServiceHandle(u64 pid, u64 service, Handle *out) {
             struct {
                 u64 magic;
                 u64 result;
-                u64 should_mitm;
+                bool should_mitm;
             } *resp = ((decltype(resp))r.Raw);
             rc = resp->result;
             if (R_SUCCEEDED(rc)) {

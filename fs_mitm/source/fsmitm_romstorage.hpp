@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #pragma once
 #include <switch.h>
 #include <stratosphere.hpp>
@@ -18,10 +34,6 @@ class RomFileStorage : public IROStorage {
         ~RomFileStorage() {
             fsFileClose(base_file);
             delete base_file;
-        };
-        
-        RomFileStorage *Clone() override {
-            return new RomFileStorage(this->base_file);
         };
     public:
         Result Read(void *buffer, size_t size, u64 offset) override {
@@ -55,10 +67,6 @@ class RomInterfaceStorage : public IROStorage {
         ~RomInterfaceStorage() {
             fsStorageClose(base_storage);
             delete base_storage;
-        };
-        
-        RomInterfaceStorage *Clone() override {
-            return new RomInterfaceStorage(this->base_storage);
         };
     public:
         Result Read(void *buffer, size_t size, u64 offset) override {

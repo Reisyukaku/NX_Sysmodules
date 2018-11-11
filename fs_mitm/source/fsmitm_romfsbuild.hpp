@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #pragma once
 #include <switch.h>
 #include <map>
@@ -9,11 +25,14 @@
 #define ROMFS_ENTRY_EMPTY 0xFFFFFFFF
 #define ROMFS_FILEPARTITION_OFS 0x200
 
+#define ROMFS_METADATA_FILE_PATH "romfs_metadata.bin"
+
 /* Types for RomFS Meta construction. */
 enum class RomFSDataSource {
     BaseRomFS,
     FileRomFS,
     LooseFile,
+    MetaData,
     Memory,
 };
 
@@ -33,6 +52,10 @@ struct RomFSMemorySourceInfo {
     const u8 *data;
 };
 
+struct RomFSMetaDataSourceInfo {
+
+};
+
 struct RomFSSourceInfo {
     u64 virtual_offset;
     u64 size;
@@ -41,6 +64,7 @@ struct RomFSSourceInfo {
         RomFSFileSourceInfo file_source_info;
         RomFSLooseSourceInfo loose_source_info;
         RomFSMemorySourceInfo memory_source_info;
+        RomFSMemorySourceInfo metadata_source_info;
     };
     RomFSDataSource type;
     
@@ -53,6 +77,7 @@ struct RomFSSourceInfo {
                 this->file_source_info.offset = offset;
                 break;
             case RomFSDataSource::LooseFile:
+            case RomFSDataSource::MetaData:
             case RomFSDataSource::Memory:
             default:
                 fatalSimple(0xF601);
@@ -67,6 +92,20 @@ struct RomFSSourceInfo {
             case RomFSDataSource::Memory:
                 this->memory_source_info.data = (decltype(this->memory_source_info.data))arg;
                 break;
+            case RomFSDataSource::MetaData:
+            case RomFSDataSource::BaseRomFS:
+            case RomFSDataSource::FileRomFS:
+            default:
+                fatalSimple(0xF601);
+        }
+    }
+    
+    RomFSSourceInfo(u64 v_o, u64 s, RomFSDataSource t) : virtual_offset(v_o), size(s), type(t) {
+        switch (this->type) {
+            case RomFSDataSource::MetaData:
+                break;
+            case RomFSDataSource::LooseFile:
+            case RomFSDataSource::Memory:
             case RomFSDataSource::BaseRomFS:
             case RomFSDataSource::FileRomFS:
             default:
@@ -78,6 +117,7 @@ struct RomFSSourceInfo {
         switch (this->type) {
             case RomFSDataSource::BaseRomFS:
             case RomFSDataSource::FileRomFS:
+            case RomFSDataSource::MetaData:
                 break;
             case RomFSDataSource::LooseFile:
                 delete this->loose_source_info.path;

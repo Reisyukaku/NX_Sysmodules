@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <cstdlib>
 #include <cstdint>
 #include <cstdio>
@@ -12,13 +28,11 @@
 
 static bool IsHexadecimal(const char *str) {
     while (*str) {
-        if (('0' <= *str && *str <= '9') || 
-            ('a' <= *str && *str <= 'f') ||
-            ('A' <= *str && *str <= 'F')) {
-                str++;
-            } else {
-                return false;
-            }
+        if (isxdigit(*str)) {
+            str++;
+        } else {
+            return false;
+        }
     }
     return true;
 }
@@ -140,14 +154,14 @@ void EmbeddedBoot2::Main() {
     }
     
     /* Allow for user-customizable programs. */
-    DIR *titles_dir = opendir("sdmc:/ReiNX/titles");
+    DIR *titles_dir = opendir("sdmc:/atmosphere/titles");
     struct dirent *ent;
     if (titles_dir != NULL) {
         while ((ent = readdir(titles_dir)) != NULL) {
             if (strlen(ent->d_name) == 0x10 && IsHexadecimal(ent->d_name)) {
                 u64 title_id = strtoul(ent->d_name, NULL, 16);
                 char title_path[FS_MAX_PATH] = {0};
-                strcpy(title_path, "sdmc:/ReiNX/titles/");
+                strcpy(title_path, "sdmc:/atmosphere/titles/");
                 strcat(title_path, ent->d_name);
                 strcat(title_path, "/boot2.flag");
                 FILE *f_flag = fopen(title_path, "rb");
@@ -159,7 +173,7 @@ void EmbeddedBoot2::Main() {
         }
         closedir(titles_dir);
     }
-    
+        
     /* We no longer need the SD card. */
     fsdevUnmountAll();
 }

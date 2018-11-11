@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <string.h>
 #include <stratosphere.hpp>
@@ -76,7 +92,7 @@ void RomFSBuildContext::MergeSdFiles() {
     if (!Utils::IsSdInitialized()) {
         return;
     }
-    if (R_FAILED((Utils::OpenSdDirForAtmosphere(this->title_id, "/romfs", &dir)))) {
+    if (R_FAILED((Utils::OpenSdDirForReiNX(this->title_id, "/romfs", &dir)))) {
         return;
     }
     fsDirClose(&dir);
@@ -383,23 +399,14 @@ void RomFSBuildContext::Build(std::vector<RomFSSourceInfo> *out_infos) {
     header->file_hash_table_ofs = header->dir_table_ofs + header->dir_table_size;
     header->file_table_ofs = header->file_hash_table_ofs + header->file_hash_table_size;
     
-    /* For debugging, uncomment this to get a log of the generated metadata tables. */
-    /*
-        {
-            FsFileSystem sd_fs;
-            if (R_SUCCEEDED(fsMountSdcard(&sd_fs))) {
-                FsFile f;
-                fsFsCreateFile(&sd_fs, "/METADATALOG.bin", this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size + sizeof(*header), 0);
-                if (R_SUCCEEDED(fsFsOpenFile(&sd_fs, "/METADATALOG.bin", FS_OPEN_READ | FS_OPEN_WRITE, &f))) {
-                    fsFileSetSize(&f, this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size + sizeof(*header));
-                    fsFileWrite(&f, 0, header, sizeof(*header));
-                    fsFileWrite(&f, sizeof(*header), metadata, this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size);
-                    fsFileClose(&f);
-                }
-                fsFsClose(&sd_fs);
-            }
-        }
-    */
+    const size_t metadata_size = this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size;
     
-    out_infos->emplace_back(header->dir_hash_table_ofs, this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size, metadata, RomFSDataSource::Memory);
+    /* Try to save metadata to the SD card, to save on memory space. */
+    if (R_SUCCEEDED(Utils::SaveSdFileForReiNX(this->title_id, ROMFS_METADATA_FILE_PATH, metadata, metadata_size))) {
+        out_infos->emplace_back(header->dir_hash_table_ofs, metadata_size, RomFSDataSource::MetaData);
+        delete metadata;
+    } else {
+        out_infos->emplace_back(header->dir_hash_table_ofs, metadata_size, metadata, RomFSDataSource::Memory);
+    }
+    
 }

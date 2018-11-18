@@ -29,8 +29,6 @@ static std::vector<u64> g_mitm_flagged_tids;
 static std::vector<u64> g_disable_mitm_flagged_tids;
 static std::atomic_bool g_has_initialized = false;
 static std::atomic_bool g_has_hid_session = false;
-
-static u64 g_override_key_combination = KEY_R;
 static bool g_override_by_default = true;
 
 /* Static buffer for loader.ini contents at runtime. */
@@ -95,8 +93,6 @@ void Utils::InitializeSdThreadFunc(void *args) {
         fsDirClose(&titles_dir);
     }
     
-    Utils::RefreshConfiguration();
-    
     g_has_initialized = true;
     
     svcExitThread();
@@ -128,7 +124,7 @@ Result Utils::OpenSdFile(const char *fn, int flags, FsFile *out) {
     return fsFsOpenFile(&g_sd_filesystem, fn, flags, out);
 }
 
-Result Utils::OpenSdFileForReiNX(u64 title_id, const char *fn, int flags, FsFile *out) {
+Result Utils::OpenSdFileForAtmosphere(u64 title_id, const char *fn, int flags, FsFile *out) {
     if (!IsSdInitialized()) {
         return 0xFA202;
     }
@@ -158,7 +154,7 @@ Result Utils::OpenSdDir(const char *path, FsDir *out) {
     return fsFsOpenDirectory(&g_sd_filesystem, path, FS_DIROPEN_DIRECTORY | FS_DIROPEN_FILE, out);
 }
 
-Result Utils::OpenSdDirForReiNX(u64 title_id, const char *path, FsDir *out) {
+Result Utils::OpenSdDirForAtmosphere(u64 title_id, const char *path, FsDir *out) {
     if (!IsSdInitialized()) {
         return 0xFA202;
     }
@@ -204,7 +200,7 @@ Result Utils::OpenRomFSDir(FsFileSystem *fs, u64 title_id, const char *path, FsD
 bool Utils::HasSdRomfsContent(u64 title_id) {
     /* Check for romfs.bin. */
     FsFile data_file;
-    if (R_SUCCEEDED(Utils::OpenSdFileForReiNX(title_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
+    if (R_SUCCEEDED(Utils::OpenSdFileForAtmosphere(title_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
         fsFileClose(&data_file);
         return true;
     }
@@ -223,7 +219,7 @@ bool Utils::HasSdRomfsContent(u64 title_id) {
     return R_SUCCEEDED(fsDirRead(&dir, 0, &read_entries, 1, &dir_entry)) && read_entries == 1;
 }
 
-Result Utils::SaveSdFileForReiNX(u64 title_id, const char *fn, void *data, size_t size) {
+Result Utils::SaveSdFileForAtmosphere(u64 title_id, const char *fn, void *data, size_t size) {
     if (!IsSdInitialized()) {
         return 0xFA202;
     }
@@ -295,90 +291,7 @@ bool Utils::HasOverrideButton(u64 tid) {
         return true;
     }
     
-    /* Unconditionally refresh loader.ini contents. */
-    RefreshConfiguration();
-    
     u64 kDown = 0;
-    bool keys_triggered = (R_SUCCEEDED(GetKeysDown(&kDown)) && ((kDown & g_override_key_combination) != 0));
+    bool keys_triggered = (R_SUCCEEDED(GetKeysDown(&kDown)) && ((kDown & KEY_R) != 0));
     return IsSdInitialized() && (g_override_by_default ^ keys_triggered);
-}
-
-static int FsMitMIniHandler(void *user, const char *section, const char *name, const char *value) {
-    /* Taken and modified, with love, from Rajkosto's implementation. */
-    if (strcasecmp(section, "config") == 0) {
-        if (strcasecmp(name, "override_key") == 0) {
-            if (value[0] == '!') {
-                g_override_by_default = true;
-                value++;
-            } else {
-                g_override_by_default = false;
-            }
-            
-            if (strcasecmp(value, "A") == 0) {
-                g_override_key_combination = KEY_A;
-            } else if (strcasecmp(value, "B") == 0) {
-                g_override_key_combination = KEY_B;
-            } else if (strcasecmp(value, "X") == 0) {
-                g_override_key_combination = KEY_X;
-            } else if (strcasecmp(value, "Y") == 0) {
-                g_override_key_combination = KEY_Y;
-            } else if (strcasecmp(value, "LS") == 0) {
-                g_override_key_combination = KEY_LSTICK;
-            } else if (strcasecmp(value, "RS") == 0) {
-                g_override_key_combination = KEY_RSTICK;
-            } else if (strcasecmp(value, "L") == 0) {
-                g_override_key_combination = KEY_L;
-            } else if (strcasecmp(value, "R") == 0) {
-                g_override_key_combination = KEY_R;
-            } else if (strcasecmp(value, "ZL") == 0) {
-                g_override_key_combination = KEY_ZL;
-            } else if (strcasecmp(value, "ZR") == 0) {
-                g_override_key_combination = KEY_ZR;
-            } else if (strcasecmp(value, "PLUS") == 0) {
-                g_override_key_combination = KEY_PLUS;
-            } else if (strcasecmp(value, "MINUS") == 0) {
-                g_override_key_combination = KEY_MINUS;
-            } else if (strcasecmp(value, "DLEFT") == 0) {
-                g_override_key_combination = KEY_DLEFT;
-            } else if (strcasecmp(value, "DUP") == 0) {
-                g_override_key_combination = KEY_DUP;
-            } else if (strcasecmp(value, "DRIGHT") == 0) {
-                g_override_key_combination = KEY_DRIGHT;
-            } else if (strcasecmp(value, "DDOWN") == 0) {
-                g_override_key_combination = KEY_DDOWN;
-            } else if (strcasecmp(value, "SL") == 0) {
-                g_override_key_combination = KEY_SL;
-            } else if (strcasecmp(value, "SR") == 0) {
-                g_override_key_combination = KEY_SR;
-            } else {
-                g_override_key_combination = 0;
-            }
-        }
-    } else {
-        return 0;
-    }
-    return 1;
-}
-
-
-void Utils::RefreshConfiguration() {
-    FsFile config_file;
-    if (R_FAILED(fsFsOpenFile(&g_sd_filesystem, "/ReiNX/loader.ini", FS_OPEN_READ, &config_file))) {
-        return;
-    }
-    
-    u64 size;
-    if (R_FAILED(fsFileGetSize(&config_file, &size))) {
-        return;
-    }
-    
-    size = std::min(size, (decltype(size))0x7FF);
-    
-    /* Read in string. */
-    std::fill(g_config_ini_data, g_config_ini_data + 0x800, 0);
-    size_t r_s;
-    fsFileRead(&config_file, 0, g_config_ini_data, size, &r_s);
-    fsFileClose(&config_file);
-    
-    ini_parse_string(g_config_ini_data, FsMitMIniHandler, NULL);
 }

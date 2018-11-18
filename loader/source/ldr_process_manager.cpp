@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <stratosphere.hpp>
 #include "ldr_process_manager.hpp"
@@ -6,13 +22,13 @@
 #include "ldr_content_management.hpp"
 #include "ldr_npdm.hpp"
 
-Result ProcessManagerService::CreateProcess(Out<MovedHandle> proc_h, u64 flags, u64 index, CopiedHandle reslimit_h) {
+Result ProcessManagerService::CreateProcess(Out<MovedHandle> proc_h, u64 index, u32 flags, CopiedHandle reslimit_h) {
     Result rc;
     Registration::TidSid tid_sid;
     LaunchQueue::LaunchItem *launch_item;
     char nca_path[FS_MAX_PATH] = {0};
     
-    fprintf(stderr, "CreateProcess(%016lx, %016lx, %08x);\n", flags, index, reslimit_h.handle);
+    fprintf(stderr, "CreateProcess(%016lx, %08x, %08x);\n", index, flags, reslimit_h.handle);
     
     ON_SCOPE_EXIT {
         /* Loader doesn't persist the copied resource limit handle. */
@@ -43,7 +59,7 @@ Result ProcessManagerService::CreateProcess(Out<MovedHandle> proc_h, u64 flags, 
     return rc;
 }
 
-Result ProcessManagerService::GetProgramInfo(Registration::TidSid tid_sid, OutPointerWithServerSize<ProcessManagerService::ProgramInfo, 0x1> out_program_info) {
+Result ProcessManagerService::GetProgramInfo(OutPointerWithServerSize<ProcessManagerService::ProgramInfo, 0x1> out_program_info, Registration::TidSid tid_sid) {
     Result rc;
     char nca_path[FS_MAX_PATH] = {0};
     /* Zero output. */
@@ -84,17 +100,21 @@ Result ProcessManagerService::UnregisterTitle(u64 index) {
 Result ProcessManagerService::PopulateProgramInfoBuffer(ProcessManagerService::ProgramInfo *out, Registration::TidSid *tid_sid) {
     NpdmUtils::NpdmInfo info;
     Result rc;
+    bool mounted_code = false;
     
     if (tid_sid->storage_id != FsStorageId_None) {
         rc = ContentManagement::MountCodeForTidSid(tid_sid);  
         if (R_FAILED(rc)) {
             return rc;
         }
+        mounted_code = true;
+    } else if (R_SUCCEEDED(ContentManagement::MountCodeNspOnSd(tid_sid->title_id))) {
+        mounted_code = true;
     }
     
     rc = NpdmUtils::LoadNpdm(tid_sid->title_id, &info);
     
-    if (tid_sid->storage_id != FsStorageId_None) {
+    if (mounted_code) {
         ContentManagement::UnmountCode();
     }
     

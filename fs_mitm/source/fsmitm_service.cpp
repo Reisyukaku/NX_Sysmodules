@@ -124,7 +124,7 @@ Result FsMitmService::OpenDataStorageByCurrentProcess(Out<std::shared_ptr<IStora
         if (R_SUCCEEDED(rc)) {
             if (Utils::HasSdRomfsContent(this->title_id)) {
                 /* TODO: Is there a sensible path that ends in ".romfs" we can use?" */
-                if (R_SUCCEEDED(Utils::OpenSdFileForReiNX(this->title_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
+                if (R_SUCCEEDED(Utils::OpenSdFileForAtmosphere(this->title_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
                     storage = std::make_shared<IStorageInterface>(new LayeredRomFS(std::make_shared<RomInterfaceStorage>(data_storage), std::make_shared<RomFileStorage>(data_file), this->title_id));
                 } else {
                     storage = std::make_shared<IStorageInterface>(new LayeredRomFS(std::make_shared<RomInterfaceStorage>(data_storage), nullptr, this->title_id));
@@ -187,7 +187,7 @@ Result FsMitmService::OpenDataStorageByDataId(Out<std::shared_ptr<IStorageInterf
         if (R_SUCCEEDED(rc)) {
             if (Utils::HasSdRomfsContent(data_id)) {
                 /* TODO: Is there a sensible path that ends in ".romfs" we can use?" */
-                if (R_SUCCEEDED(Utils::OpenSdFileForReiNX(data_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
+                if (R_SUCCEEDED(Utils::OpenSdFileForAtmosphere(data_id, "romfs.bin", FS_OPEN_READ, &data_file))) {
                     storage = std::make_shared<IStorageInterface>(new LayeredRomFS(std::make_shared<RomInterfaceStorage>(data_storage), std::make_shared<RomFileStorage>(data_file), data_id));
                 } else {
                     storage = std::make_shared<IStorageInterface>(new LayeredRomFS(std::make_shared<RomInterfaceStorage>(data_storage), nullptr, data_id));

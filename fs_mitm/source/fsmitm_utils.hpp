@@ -23,16 +23,16 @@ class Utils {
         static bool IsSdInitialized();
         
         static Result OpenSdFile(const char *fn, int flags, FsFile *out);
-        static Result OpenSdFileForReiNX(u64 title_id, const char *fn, int flags, FsFile *out);
+        static Result OpenSdFileForAtmosphere(u64 title_id, const char *fn, int flags, FsFile *out);
         static Result OpenRomFSSdFile(u64 title_id, const char *fn, int flags, FsFile *out);
         static Result OpenSdDir(const char *path, FsDir *out);
-        static Result OpenSdDirForReiNX(u64 title_id, const char *path, FsDir *out);
+        static Result OpenSdDirForAtmosphere(u64 title_id, const char *path, FsDir *out);
         static Result OpenRomFSSdDir(u64 title_id, const char *path, FsDir *out);        
         
         static Result OpenRomFSFile(FsFileSystem *fs, u64 title_id, const char *fn, int flags, FsFile *out);
         static Result OpenRomFSDir(FsFileSystem *fs, u64 title_id, const char *path, FsDir *out);
         
-        static Result SaveSdFileForReiNX(u64 title_id, const char *fn, void *data, size_t size);
+        static Result SaveSdFileForAtmosphere(u64 title_id, const char *fn, void *data, size_t size);
         
         static bool HasSdRomfsContent(u64 title_id);
         
@@ -46,6 +46,4 @@ class Utils {
         static void InitializeHidThreadFunc(void *args);
         static Result GetKeysDown(u64 *keys);
         static bool HasOverrideButton(u64 tid);
-    private:
-        static void RefreshConfiguration();
 };

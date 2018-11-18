@@ -14,13 +14,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#pragma once
 #include <switch.h>
-#include <cstdio>
+#include <string.h>
 
-#include "ldr_nso.hpp"
+#include "ldr_content_management.hpp"
+#include "ldr_hid.hpp"
 
-class PatchUtils {  
-    public:
-        static void ApplyPatches(const NsoUtils::NsoHeader *header, u64 title_id, u8 *mapped_nso, size_t size);
-};
+Result HidManagement::GetKeysDown(u64 *keys) {
+    if (!ContentManagement::HasCreatedTitle(0x0100000000000013) || R_FAILED(hidInitialize())) {
+        return MAKERESULT(Module_Libnx, LibnxError_InitFail_HID);
+    }
+    
+    hidScanInput();
+    *keys = hidKeysDown(CONTROLLER_P1_AUTO);
+    
+    hidExit();
+    return 0x0;
+}

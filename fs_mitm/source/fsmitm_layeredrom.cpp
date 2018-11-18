@@ -91,7 +91,7 @@ Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
                 case RomFSDataSource::MetaData:
                     {
                         FsFile file;
-                        if (R_FAILED((rc = Utils::OpenSdFileForReiNX(this->title_id, ROMFS_METADATA_FILE_PATH, FS_OPEN_READ, &file)))) {
+                        if (R_FAILED((rc = Utils::OpenSdFileForAtmosphere(this->title_id, ROMFS_METADATA_FILE_PATH, FS_OPEN_READ, &file)))) {
                             fatalSimple(rc);
                         }
                         size_t out_read;

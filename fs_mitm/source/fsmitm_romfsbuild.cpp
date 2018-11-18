@@ -92,7 +92,7 @@ void RomFSBuildContext::MergeSdFiles() {
     if (!Utils::IsSdInitialized()) {
         return;
     }
-    if (R_FAILED((Utils::OpenSdDirForReiNX(this->title_id, "/romfs", &dir)))) {
+    if (R_FAILED((Utils::OpenSdDirForAtmosphere(this->title_id, "/romfs", &dir)))) {
         return;
     }
     fsDirClose(&dir);
@@ -402,7 +402,7 @@ void RomFSBuildContext::Build(std::vector<RomFSSourceInfo> *out_infos) {
     const size_t metadata_size = this->dir_hash_table_size + this->dir_table_size + this->file_hash_table_size + this->file_table_size;
     
     /* Try to save metadata to the SD card, to save on memory space. */
-    if (R_SUCCEEDED(Utils::SaveSdFileForReiNX(this->title_id, ROMFS_METADATA_FILE_PATH, metadata, metadata_size))) {
+    if (R_SUCCEEDED(Utils::SaveSdFileForAtmosphere(this->title_id, ROMFS_METADATA_FILE_PATH, metadata, metadata_size))) {
         out_infos->emplace_back(header->dir_hash_table_ofs, metadata_size, RomFSDataSource::MetaData);
         delete metadata;
     } else {

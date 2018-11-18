@@ -40,6 +40,7 @@ extern "C" {
     void __appExit(void);
 }
 
+
 void __libnx_initheap(void) {
 	void*  addr = nx_inner_heap;
 	size_t size = nx_inner_heap_size;
@@ -60,9 +61,12 @@ void __appExit(void) {
     /* Nothing to clean up, because we're sm. */
 }
 
+
+
+
 int main(int argc, char **argv)
 {
-    //consoleDebugInit(debugDevice_SVC);
+    consoleDebugInit(debugDevice_SVC);
     
     /* TODO: What's a good timeout value to use here? */
     auto server_manager = new WaitableManager(1);

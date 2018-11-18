@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
 #include <switch.h>
 #include <algorithm>
 
@@ -7,15 +23,6 @@
 #include "ldr_content_management.hpp"
 #include "ldr_npdm.hpp"
 #include "ldr_nso.hpp"
-
-extern "C" {
-    
-    bool __attribute__((weak)) kernelAbove600(void) {
-        u64 tmp;
-        return (svcGetInfo(&tmp, 21, INVALID_HANDLE, 0) != 0xF001);
-    }
-    
-}
 
 Result ProcessCreation::InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle reslimit_h, u64 arg_flags, ProcessInfo *out_proc_info) {
     /* Initialize a ProcessInfo using an npdm. */
@@ -71,7 +78,7 @@ Result ProcessCreation::InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle 
     
     /* 5.0.0+ Pool Partition. */
     if (kernelAbove500()) {
-        u32 pool_partition_id = (npdm->acid->is_retail >> 2) & 0xF;
+        u32 pool_partition_id = (npdm->acid->flags >> 2) & 0xF;
         switch (pool_partition_id) {
             case 0: /* Application. */
                 if ((application_type & 3) == 2) {
@@ -102,6 +109,7 @@ Result ProcessCreation::CreateProcess(Handle *out_process_h, u64 index, char *nc
     Registration::Process *target_process;
     Handle process_h = 0;
     u64 process_id = 0;
+    bool mounted_code = false;
     Result rc;
     
     /* Get the process from the registration queue. */
@@ -115,6 +123,11 @@ Result ProcessCreation::CreateProcess(Handle *out_process_h, u64 index, char *nc
         rc = ContentManagement::MountCodeForTidSid(&target_process->tid_sid);  
         if (R_FAILED(rc)) {
             return rc;
+        }
+        mounted_code = true;
+    } else {
+        if (R_SUCCEEDED(ContentManagement::MountCodeNspOnSd(target_process->tid_sid.title_id))) {
+            mounted_code = true;
         }
     }
     
@@ -202,10 +215,14 @@ Result ProcessCreation::CreateProcess(Handle *out_process_h, u64 index, char *nc
     
     rc = 0;  
 CREATE_PROCESS_END:
-    if (R_SUCCEEDED(rc) && target_process->tid_sid.storage_id != FsStorageId_None) {
-        rc = ContentManagement::UnmountCode();
-    } else {
-        ContentManagement::UnmountCode();
+    /* ECS is a one-shot operation. */
+    ContentManagement::ClearExternalContentSource(target_process->tid_sid.title_id);
+    if (mounted_code) {
+        if (R_SUCCEEDED(rc) && target_process->tid_sid.storage_id != FsStorageId_None) {
+            rc = ContentManagement::UnmountCode();
+        } else {
+            ContentManagement::UnmountCode();
+        }
     }
     if (R_SUCCEEDED(rc)) {
         *out_process_h = process_h;

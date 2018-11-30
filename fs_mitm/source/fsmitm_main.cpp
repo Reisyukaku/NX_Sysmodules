@@ -75,7 +75,7 @@ void __appExit(void) {
 
 struct FsMitmManagerOptions {
     static const size_t PointerBufferSize = 0x800;
-    static const size_t MaxDomains = 0x10;
+    static const size_t MaxDomains = 0x40;
     static const size_t MaxDomainObjects = 0x4000;
 };
 using FsMitmManager = WaitableManager<FsMitmManagerOptions>;
@@ -85,7 +85,13 @@ int main(int argc, char **argv)
     Thread sd_initializer_thread = {0};
     Thread hid_initializer_thread = {0};
     consoleDebugInit(debugDevice_SVC);
-        
+    
+    /* TODO: What's a good timeout value to use here? */
+    auto server_manager = new FsMitmManager(5);
+
+    /* Create fsp-srv mitm. */
+    AddMitmServerToManager<FsMitmService>(server_manager, "fsp-srv", 61);
+
     if (R_FAILED(threadCreate(&sd_initializer_thread, &Utils::InitializeSdThreadFunc, NULL, 0x4000, 0x15, 0))) {
         /* TODO: Panic. */
     }
@@ -99,12 +105,6 @@ int main(int argc, char **argv)
     if (R_FAILED(threadStart(&hid_initializer_thread))) {
         /* TODO: Panic. */
     }
-    
-    /* TODO: What's a good timeout value to use here? */
-    auto server_manager = new FsMitmManager(5);
-        
-    /* Create fsp-srv mitm. */
-    AddMitmServerToManager<FsMitmService>(server_manager, "fsp-srv", 61);
                 
     /* Loop forever, servicing our services. */
     server_manager->Process();

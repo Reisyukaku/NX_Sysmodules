@@ -23,16 +23,26 @@
 #include "debug.hpp"
 #include "fsmitm_utils.hpp"
 #include "ini.h"
+#include "sha256.h"
 
 static FsFileSystem g_sd_filesystem = {0};
 static std::vector<u64> g_mitm_flagged_tids;
 static std::vector<u64> g_disable_mitm_flagged_tids;
 static std::atomic_bool g_has_initialized = false;
 static std::atomic_bool g_has_hid_session = false;
+
+static u64 g_override_key_combination = KEY_R;
+static u64 g_override_hbl_tid = 0x010000000000100DULL;
 static bool g_override_by_default = true;
 
 /* Static buffer for loader.ini contents at runtime. */
 static char g_config_ini_data[0x800];
+
+/* Backup file for CAL0 partition. */
+static constexpr size_t ProdinfoSize = 0x8000;
+static FsFile g_cal0_file = {0};
+static u8 g_cal0_storage_backup[ProdinfoSize];
+static u8 g_cal0_backup[ProdinfoSize];
 
 static bool IsHexadecimal(const char *str) {
     while (*str) {
@@ -62,6 +72,60 @@ void Utils::InitializeSdThreadFunc(void *args) {
         svcSleepThread(1000ULL);
     }
     
+    /* Back up CAL0, if it's not backed up already. */
+    fsFsCreateDirectory(&g_sd_filesystem, "/ReiNX/automatic_backups");
+    {
+        FsStorage cal0_storage;
+        if (R_FAILED(fsOpenBisStorage(&cal0_storage, BisStorageId_Prodinfo)) || R_FAILED(fsStorageRead(&cal0_storage, 0, g_cal0_storage_backup, ProdinfoSize))) {
+            std::abort();
+        }
+        fsStorageClose(&cal0_storage);
+        
+        char serial_number[0x40] = {0};
+        memcpy(serial_number, g_cal0_storage_backup + 0x250, 0x18);
+        
+        
+        char prodinfo_backup_path[FS_MAX_PATH] = {0};
+        if (strlen(serial_number) > 0) {
+            snprintf(prodinfo_backup_path, sizeof(prodinfo_backup_path) - 1, "/ReiNX/automatic_backups/%s_PRODINFO.bin", serial_number);
+        } else {
+            snprintf(prodinfo_backup_path, sizeof(prodinfo_backup_path) - 1, "/ReiNX/automatic_backups/PRODINFO.bin");
+        }
+        
+        fsFsCreateFile(&g_sd_filesystem, prodinfo_backup_path, ProdinfoSize, 0);
+        if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, prodinfo_backup_path, FS_OPEN_READ | FS_OPEN_WRITE, &g_cal0_file))) {
+            bool has_auto_backup = false;
+            size_t read = 0;
+            if (R_SUCCEEDED(fsFileRead(&g_cal0_file, 0, g_cal0_backup, sizeof(g_cal0_backup), &read)) && read == sizeof(g_cal0_backup)) {
+                bool is_cal0_valid = true;
+                is_cal0_valid &= memcmp(g_cal0_backup, "CAL0", 4) == 0;
+                is_cal0_valid &= memcmp(g_cal0_backup + 0x250, serial_number, 0x18) == 0;
+                u32 cal0_size = ((u32 *)g_cal0_backup)[2];
+                is_cal0_valid &= cal0_size + 0x40 <= ProdinfoSize;
+                if (is_cal0_valid) {
+                    struct sha256_state sha_ctx;
+                    u8 calc_hash[0x20];
+                    sha256_init(&sha_ctx);
+                    sha256_update(&sha_ctx, g_cal0_backup + 0x40, cal0_size);
+                    sha256_finalize(&sha_ctx);
+                    sha256_finish(&sha_ctx, calc_hash);
+                    is_cal0_valid &= memcmp(calc_hash, g_cal0_backup + 0x20, sizeof(calc_hash)) == 0;
+                }
+                has_auto_backup = is_cal0_valid;
+            }
+            
+            if (!has_auto_backup) {
+                fsFileSetSize(&g_cal0_file, ProdinfoSize);
+                fsFileWrite(&g_cal0_file, 0, g_cal0_backup, ProdinfoSize);
+                fsFileFlush(&g_cal0_file);
+            }
+            
+            /* NOTE: g_cal0_file is intentionally not closed here. This prevents any other process from opening it. */
+            memset(g_cal0_storage_backup, 0, sizeof(g_cal0_storage_backup));
+            memset(g_cal0_backup, 0, sizeof(g_cal0_backup));
+        }
+    }
+    
     /* Check for MitM flags. */
     FsDir titles_dir;
     if (R_SUCCEEDED(fsFsOpenDirectory(&g_sd_filesystem, "/ReiNX/titles", FS_DIROPEN_DIRECTORY, &titles_dir))) {
@@ -74,24 +138,46 @@ void Utils::InitializeSdThreadFunc(void *args) {
                 char title_path[FS_MAX_PATH] = {0};
                 strcpy(title_path, "/ReiNX/titles/");
                 strcat(title_path, dir_entry.name);
-                strcat(title_path, "/fsmitm.flag");
+                strcat(title_path, "/flags/fsmitm.flag");
                 if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, title_path, FS_OPEN_READ, &f))) {
                     g_mitm_flagged_tids.push_back(title_id);
                     fsFileClose(&f);
+                } else {
+                    /* TODO: Deprecate. */
+                    memset(title_path, 0, sizeof(title_path));
+                    strcpy(title_path, "/ReiNX/titles/");
+                    strcat(title_path, dir_entry.name);
+                    strcat(title_path, "/fsmitm.flag");
+                    if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, title_path, FS_OPEN_READ, &f))) {
+                        g_mitm_flagged_tids.push_back(title_id);
+                        fsFileClose(&f);
+                    }
                 }
                 
                 memset(title_path, 0, sizeof(title_path));
                 strcpy(title_path, "/ReiNX/titles/");
                 strcat(title_path, dir_entry.name);
-                strcat(title_path, "/fsmitm_disable.flag");
+                strcat(title_path, "/flags/fsmitm_disable.flag");
                 if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, title_path, FS_OPEN_READ, &f))) {
                     g_disable_mitm_flagged_tids.push_back(title_id);
                     fsFileClose(&f);
+                } else {
+                    /* TODO: Deprecate. */
+                    memset(title_path, 0, sizeof(title_path));
+                    strcpy(title_path, "/ReiNX/titles/");
+                    strcat(title_path, dir_entry.name);
+                    strcat(title_path, "/fsmitm_disable.flag");
+                    if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, title_path, FS_OPEN_READ, &f))) {
+                        g_disable_mitm_flagged_tids.push_back(title_id);
+                        fsFileClose(&f);
+                    }
                 }
             }
         }
         fsDirClose(&titles_dir);
     }
+    
+    Utils::RefreshConfiguration();
     
     g_has_initialized = true;
     
@@ -260,7 +346,56 @@ Result Utils::SaveSdFileForAtmosphere(u64 title_id, const char *fn, void *data, 
     return rc;
 }
 
+bool Utils::HasTitleFlag(u64 tid, const char *flag) {
+    if (IsSdInitialized()) {
+        FsFile f;
+        char flag_path[FS_MAX_PATH];
+        
+        memset(flag_path, 0, sizeof(flag_path));
+        snprintf(flag_path, sizeof(flag_path) - 1, "flags/%s.flag", flag);
+        if (OpenSdFileForAtmosphere(tid, flag_path, FS_OPEN_READ, &f)) {
+            fsFileClose(&f);
+            return true;
+        }
+        
+        /* TODO: Deprecate. */
+        snprintf(flag_path, sizeof(flag_path) - 1, "%s.flag", flag);
+        if (OpenSdFileForAtmosphere(tid, flag_path, FS_OPEN_READ, &f)) {
+            fsFileClose(&f);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Utils::HasGlobalFlag(const char *flag) {
+    if (IsSdInitialized()) {
+        FsFile f;
+        char flag_path[FS_MAX_PATH] = {0};
+        snprintf(flag_path, sizeof(flag_path), "/ReiNX/flags/%s.flag", flag);
+        if (fsFsOpenFile(&g_sd_filesystem, flag_path, FS_OPEN_READ, &f)) {
+            fsFileClose(&f);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Utils::HasHblFlag(const char *flag) {
+    char hbl_flag[FS_MAX_PATH] = {0};
+    snprintf(hbl_flag, sizeof(hbl_flag), "hbl_%s", flag);
+    return HasGlobalFlag(hbl_flag);
+}
+
+bool Utils::HasFlag(u64 tid, const char *flag) {
+    return HasTitleFlag(tid, flag) || (tid == g_override_hbl_tid && HasHblFlag(flag));
+}
+
 bool Utils::HasSdMitMFlag(u64 tid) {
+    if (tid == g_override_hbl_tid) {
+        return true;
+    }
+    
     if (IsSdInitialized()) {
         return std::find(g_mitm_flagged_tids.begin(), g_mitm_flagged_tids.end(), tid) != g_mitm_flagged_tids.end();
     }
@@ -291,7 +426,95 @@ bool Utils::HasOverrideButton(u64 tid) {
         return true;
     }
     
+    /* Unconditionally refresh loader.ini contents. */
+    RefreshConfiguration();
+    
     u64 kDown = 0;
-    bool keys_triggered = (R_SUCCEEDED(GetKeysDown(&kDown)) && ((kDown & KEY_R) != 0));
+    bool keys_triggered = (R_SUCCEEDED(GetKeysDown(&kDown)) && ((kDown & g_override_key_combination) != 0));
     return IsSdInitialized() && (g_override_by_default ^ keys_triggered);
+}
+
+static int FsMitMIniHandler(void *user, const char *section, const char *name, const char *value) {
+    /* Taken and modified, with love, from Rajkosto's implementation. */
+    if (strcasecmp(section, "config") == 0) {
+        if (strcasecmp(name, "hbl_tid") == 0) {
+            u64 override_tid = strtoul(value, NULL, 16);
+            if (override_tid != 0) {
+                g_override_hbl_tid = override_tid;
+            }
+        } else if (strcasecmp(name, "override_key") == 0) {
+            if (value[0] == '!') {
+                g_override_by_default = true;
+                value++;
+            } else {
+                g_override_by_default = false;
+            }
+            
+            if (strcasecmp(value, "A") == 0) {
+                g_override_key_combination = KEY_A;
+            } else if (strcasecmp(value, "B") == 0) {
+                g_override_key_combination = KEY_B;
+            } else if (strcasecmp(value, "X") == 0) {
+                g_override_key_combination = KEY_X;
+            } else if (strcasecmp(value, "Y") == 0) {
+                g_override_key_combination = KEY_Y;
+            } else if (strcasecmp(value, "LS") == 0) {
+                g_override_key_combination = KEY_LSTICK;
+            } else if (strcasecmp(value, "RS") == 0) {
+                g_override_key_combination = KEY_RSTICK;
+            } else if (strcasecmp(value, "L") == 0) {
+                g_override_key_combination = KEY_L;
+            } else if (strcasecmp(value, "R") == 0) {
+                g_override_key_combination = KEY_R;
+            } else if (strcasecmp(value, "ZL") == 0) {
+                g_override_key_combination = KEY_ZL;
+            } else if (strcasecmp(value, "ZR") == 0) {
+                g_override_key_combination = KEY_ZR;
+            } else if (strcasecmp(value, "PLUS") == 0) {
+                g_override_key_combination = KEY_PLUS;
+            } else if (strcasecmp(value, "MINUS") == 0) {
+                g_override_key_combination = KEY_MINUS;
+            } else if (strcasecmp(value, "DLEFT") == 0) {
+                g_override_key_combination = KEY_DLEFT;
+            } else if (strcasecmp(value, "DUP") == 0) {
+                g_override_key_combination = KEY_DUP;
+            } else if (strcasecmp(value, "DRIGHT") == 0) {
+                g_override_key_combination = KEY_DRIGHT;
+            } else if (strcasecmp(value, "DDOWN") == 0) {
+                g_override_key_combination = KEY_DDOWN;
+            } else if (strcasecmp(value, "SL") == 0) {
+                g_override_key_combination = KEY_SL;
+            } else if (strcasecmp(value, "SR") == 0) {
+                g_override_key_combination = KEY_SR;
+            } else {
+                g_override_key_combination = 0;
+            }
+        }
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+
+void Utils::RefreshConfiguration() {
+    FsFile config_file;
+    if (R_FAILED(fsFsOpenFile(&g_sd_filesystem, "/ReiNX/loader.ini", FS_OPEN_READ, &config_file))) {
+        return;
+    }
+    
+    u64 size;
+    if (R_FAILED(fsFileGetSize(&config_file, &size))) {
+        return;
+    }
+    
+    size = std::min(size, (decltype(size))0x7FF);
+    
+    /* Read in string. */
+    std::fill(g_config_ini_data, g_config_ini_data + 0x800, 0);
+    size_t r_s;
+    fsFileRead(&config_file, 0, g_config_ini_data, size, &r_s);
+    fsFileClose(&config_file);
+    
+    ini_parse_string(g_config_ini_data, FsMitMIniHandler, NULL);
 }

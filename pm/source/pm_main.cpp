@@ -101,7 +101,6 @@ void __appInit(void) {
     rc = smManagerAmsInitialize();
     if (R_SUCCEEDED(rc)) {
         smManagerAmsEndInitialDefers();
-        smManagerAmsExit();
     } else {
         fatalSimple(0xCAFE << 4 | 2);
     }

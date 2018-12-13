@@ -73,7 +73,7 @@ void Utils::InitializeSdThreadFunc(void *args) {
     }
     
     /* Back up CAL0, if it's not backed up already. */
-    fsFsCreateDirectory(&g_sd_filesystem, "/ReiNX/automatic_backups");
+    /*fsFsCreateDirectory(&g_sd_filesystem, "/ReiNX/automatic_backups");
     {
         FsStorage cal0_storage;
         if (R_FAILED(fsOpenBisStorage(&cal0_storage, BisStorageId_Prodinfo)) || R_FAILED(fsStorageRead(&cal0_storage, 0, g_cal0_storage_backup, ProdinfoSize))) {
@@ -120,11 +120,11 @@ void Utils::InitializeSdThreadFunc(void *args) {
                 fsFileFlush(&g_cal0_file);
             }
             
-            /* NOTE: g_cal0_file is intentionally not closed here. This prevents any other process from opening it. */
+            // NOTE: g_cal0_file is intentionally not closed here. This prevents any other process from opening it.
             memset(g_cal0_storage_backup, 0, sizeof(g_cal0_storage_backup));
             memset(g_cal0_backup, 0, sizeof(g_cal0_backup));
         }
-    }
+    }*/
     
     /* Check for MitM flags. */
     FsDir titles_dir;

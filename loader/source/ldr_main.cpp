@@ -26,6 +26,9 @@
 #include "ldr_debug_monitor.hpp"
 #include "ldr_shell.hpp"
 #include "ldr_ro_service.hpp"
+#include "ldr_tx.hpp"
+#include "ldr_usbfs.hpp"
+#include "ldr_cht.hpp"
 
 extern "C" {
     extern u32 __start__;
@@ -103,6 +106,9 @@ int main(int argc, char **argv)
     auto server_manager = new WaitableManager<LoaderServerOptions>(1);
         
     /* Add services to manager. */
+    server_manager->AddWaitable(new ServiceServer<UsbfsService>("usbfs", 1));
+    server_manager->AddWaitable(new ServiceServer<TXService>("tx", 1));
+    server_manager->AddWaitable(new ServiceServer<CheatService>("ldr:cht", 1));
     server_manager->AddWaitable(new ServiceServer<ProcessManagerService>("ldr:pm", 1));
     server_manager->AddWaitable(new ServiceServer<ShellService>("ldr:shel", 3));
     server_manager->AddWaitable(new ServiceServer<DebugMonitorService>("ldr:dmnt", 2));

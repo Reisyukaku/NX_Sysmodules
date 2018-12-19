@@ -256,21 +256,8 @@ uintptr_t memsearch(void *startPos, size_t searchSize, void *pattern, size_t pat
     return 0;
 }
 
-void HardCodedPatches(u64 tid, u8 *code, size_t size) {
-    //Version string ;)
-    if(tid == 0x0100000000000009) {
-        u8 pattern[] = {
-            0xE1, 0x07, 0x40, 0xF9, 0xE2, 0x03, 0x18, 0x32
-        };
-        u8 patch[] = {
-            0x00, 0x44, 0x8A, 0x52, 0xA0, 0x2C, 0xAD, 0x72, 0x60, 0xD2, 0x06, 0xB8,
-            0xC0, 0x09, 0x8B, 0x52, 0x60, 0x12, 0x07, 0xB8, 0xE0, 0x03, 0x1F, 0xAA, 
-            0xFD, 0x7B, 0x42, 0xA9, 0xF4, 0x4F, 0x41, 0xA9, 0xFF, 0xC3, 0x00, 0x91, 
-            0xC0, 0x03, 0x5F, 0xD6
-        };
-        uintptr_t off = memsearch(code, size, pattern, sizeof(pattern));
-        if(off) memcpy((u8*)off + 0x10, patch, sizeof(patch));
-    }
+void HardCodedPatches(u64 tid, u8 *code, u32 seg, size_t size) {
+    //STUBBED
 }
 
 Result NsoUtils::LoadNsoSegment(u64 title_id, unsigned int index, unsigned int segment, FILE *f_nso, u8 *map_base, u8 *map_end) {
@@ -315,8 +302,7 @@ Result NsoUtils::LoadNsoSegment(u64 title_id, unsigned int index, unsigned int s
         }
     }
     
-    if(segment == 0) 
-        HardCodedPatches(title_id, dst_addr, out_size);
+    HardCodedPatches(title_id, dst_addr, segment, out_size);
     
     return 0x0;
 }

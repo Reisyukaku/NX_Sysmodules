@@ -64,6 +64,7 @@ class Registration {
             u64 index;
             u64 process_id;
             u64 title_id;
+            u32 procFlags;
             Registration::TidSid tid_sid;
             std::array<Registration::NsoInfoHolder, NSO_INFO_MAX> nso_infos;
             std::array<Registration::NroInfo, NRO_INFO_MAX> nro_infos;

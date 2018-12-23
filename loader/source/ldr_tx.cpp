@@ -6,14 +6,6 @@
 Result TXService::TX_123(InPointer<char> data) {
     u32 ret = 0;
     //Returns either 0xA08 or 0; deals with sending rom data
-    char buf[0x100] = {0};
-    memcpy(buf, armGetTls(), 0x100);
-    char g_nso_path[FS_MAX_PATH] = {0};
-    std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
-    snprintf(g_nso_path, FS_MAX_PATH, "sdmc:/ipc123.bin");
-    FILE *fp = fopen(g_nso_path, "wb");
-    fwrite(buf, 0x100, 1, fp);
-    fclose(fp);
     return 0;
 }
 

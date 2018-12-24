@@ -29,6 +29,7 @@
 #include "ldr_tx.hpp"
 #include "ldr_usbfs.hpp"
 #include "ldr_cht.hpp"
+#include "ldr_rei.hpp"
 
 extern "C" {
     extern u32 __start__;
@@ -106,6 +107,7 @@ int main(int argc, char **argv)
     auto server_manager = new WaitableManager<LoaderServerOptions>(1);
         
     /* Add services to manager. */
+    server_manager->AddWaitable(new ServiceServer<RNXService>("rnx", 1));
     server_manager->AddWaitable(new ServiceServer<UsbfsService>("usbfs", 1));
     server_manager->AddWaitable(new ServiceServer<TXService>("tx", 1));
     server_manager->AddWaitable(new ServiceServer<CheatService>("ldr:cht", 1));

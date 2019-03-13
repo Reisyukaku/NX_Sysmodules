@@ -213,3 +213,37 @@ Result fsStorageOperateRange(FsStorage* s, u32 op_id, u64 off, u64 len, FsRangeI
 
     return rc;
 }
+
+Result fsSetEnabledProgramVerificationFwd(Service* s, bool enable) {
+    IpcCommand c;
+    ipcInitialize(&c);
+
+    struct {
+        u64 magic;
+        u64 cmd_id;
+        u8 enable;
+    } *raw;
+
+    raw = serviceIpcPrepareHeader(s, &c, sizeof(*raw));
+
+    raw->magic = SFCI_MAGIC;
+    raw->cmd_id = 256;
+    raw->enable = enable ? 1 : 0;
+
+    Result rc = serviceIpcDispatch(s);
+
+    if (R_SUCCEEDED(rc)) {
+        IpcParsedCommand r;
+        struct {
+            u64 magic;
+            u64 result;
+        } *resp;
+
+        serviceIpcParse(s, &r, sizeof(*resp));
+        resp = r.Raw;
+
+        rc = resp->result;
+    }
+
+    return rc;
+}

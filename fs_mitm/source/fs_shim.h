@@ -27,6 +27,8 @@ Result fsFileOperateRange(FsFile* f, u32 op_id, u64 off, u64 len, FsRangeInfo *o
 /* Missing FS Storage commands. */
 Result fsStorageOperateRange(FsStorage* s, u32 op_id, u64 off, u64 len, FsRangeInfo *out);
 
+Result fsSetEnabledProgramVerificationFwd(Service* s, bool enable);
+
 #ifdef __cplusplus
 }
 #endif

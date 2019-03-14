@@ -211,6 +211,7 @@ Result Registration::LaunchDebugProcess(u64 pid) {
 }
 
 Result Registration::LaunchProcess(u64 title_id, FsStorageId storage_id, u64 launch_flags, u64 *out_pid) {
+    fsprSetEnabledProgramVerification(false);
     /* Only allow one mutex to exist. */
     std::scoped_lock lk{g_process_launch_mutex};
     g_process_launch_state.tid_sid.title_id = title_id;

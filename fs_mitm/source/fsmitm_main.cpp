@@ -23,7 +23,6 @@
 #include <stratosphere.hpp>
 
 #include "fsmitm_service.hpp"
-#include "fsprmitm_service.hpp"
 
 #include "fsmitm_utils.hpp"
 
@@ -92,7 +91,6 @@ int main(int argc, char **argv)
 
     /* Create fsp-srv mitm. */
     AddMitmServerToManager<FsMitmService>(server_manager, "fsp-srv", 61);
-    AddMitmServerToManager<FsprMitmService>(server_manager, "fsp-pr", 1);
 
     if (R_FAILED(threadCreate(&sd_initializer_thread, &Utils::InitializeSdThreadFunc, NULL, 0x4000, 0x15, 0))) {
         /* TODO: Panic. */

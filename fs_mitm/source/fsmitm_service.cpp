@@ -101,18 +101,11 @@ Result FsMitmService::OpenBisStorage(Out<std::shared_ptr<IStorageInterface>> out
         if (R_SUCCEEDED(rc)) {
             const bool is_sysmodule = this->title_id < 0x0100000000001000;
             const bool has_bis_write_flag = Utils::HasFlag(this->title_id, "bis_write");
-            const bool has_cal0_read_flag = Utils::HasFlag(this->title_id, "cal_read");
             if (bis_partition_id == BisStorageId_Boot0) {
                 storage = std::make_shared<IStorageInterface>(new Boot0Storage(bis_storage, this->title_id));
             } else if (bis_partition_id == BisStorageId_Prodinfo) {
-                /* PRODINFO should *never* be writable. */
-                if (is_sysmodule || has_cal0_read_flag) {
-                    storage = std::make_shared<IStorageInterface>(new ROProxyStorage(bis_storage));
-                } else {
-                    /* Do not allow non-sysmodules to read *or* write CAL0. */
-                    fsStorageClose(&bis_storage);
-                    return 0x320002;
-                }
+                /* PRODINFO should *always* be readable and writable. */
+                storage = std::make_shared<IStorageInterface>(new ROProxyStorage(bis_storage));
             } else {
                 if (is_sysmodule || has_bis_write_flag) {
                     /* Sysmodules should still be allowed to read and write. */

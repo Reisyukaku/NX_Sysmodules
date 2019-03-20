@@ -105,7 +105,7 @@ Result FsMitmService::OpenBisStorage(Out<std::shared_ptr<IStorageInterface>> out
                 storage = std::make_shared<IStorageInterface>(new Boot0Storage(bis_storage, this->title_id));
             } else if (bis_partition_id == BisStorageId_Prodinfo) {
                 /* PRODINFO should *always* be readable and writable. */
-                storage = std::make_shared<IStorageInterface>(new ROProxyStorage(bis_storage));
+                storage = std::make_shared<IStorageInterface>(new ProxyStorage(bis_storage));
             } else {
                 if (is_sysmodule || has_bis_write_flag) {
                     /* Sysmodules should still be allowed to read and write. */

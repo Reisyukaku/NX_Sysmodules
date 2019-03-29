@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
@@ -22,6 +22,9 @@
 #include <switch.h>
 #include <stratosphere.hpp>
 
+extern "C" {
+#include "fatal_reboot.h"
+}
 #include "fatal_types.hpp"
 #include "fatal_private.hpp"
 #include "fatal_user.hpp"
@@ -37,10 +40,10 @@ extern "C" {
     #define INNER_HEAP_SIZE 0x2A0000
     size_t nx_inner_heap_size = INNER_HEAP_SIZE;
     char   nx_inner_heap[INNER_HEAP_SIZE];
-    
+
     u32 __nx_nv_transfermem_size = 0x40000;
     ViLayerFlags __nx_vi_stray_layer_flags = (ViLayerFlags)0;
-    
+
     void __libnx_initheap(void);
     void __appInit(void);
     void __appExit(void);
@@ -61,77 +64,82 @@ void __libnx_initheap(void) {
 
 void __appInit(void) {
     Result rc;
-    
+
     rc = smInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = setInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = setsysInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = pminfoInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = i2cInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = bpcInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = pcvInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = lblInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = psmInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = spsmInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = plInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = gpioInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = fsInitialize();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
     rc = fsdevMountSdmc();
     if (R_FAILED(rc)) {
         std::abort();
     }
-    
+
+		rc = splInitialize();
+		if (R_FAILED(rc)) {
+				std::abort();
+		}
+
     /* fatal cannot throw fatal, so don't do: CheckAtmosphereVersion(CURRENT_ATMOSPHERE_VERSION); */
 }
 
@@ -157,7 +165,8 @@ int main(int argc, char **argv)
 {
     /* Load settings from set:sys. */
     InitializeFatalConfig();
-        
+
+		fatal_load_payload();
     /* Load shared font. */
     if (R_FAILED(FontManager::InitializeSharedFont())) {
         std::abort();
@@ -181,4 +190,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

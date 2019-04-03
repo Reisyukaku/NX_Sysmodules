@@ -183,6 +183,16 @@ void EmbeddedBoot2::Main() {
                 if (f_flag != NULL) {
                     fclose(f_flag);
                     LaunchTitle((Boot2KnownTitleId)title_id, FsStorageId_None, 0, NULL);
+                }else{
+                    memset(title_path, 0, FS_MAX_PATH);
+                    strcpy(title_path, "sdmc:/ReiNX/titles/");
+                    strcat(title_path, ent->d_name);
+                    strcat(title_path, "/flags/boot2.flag");
+                    FILE *f_flag = fopen(title_path, "rb");
+                    if (f_flag != NULL) {
+                        fclose(f_flag);
+                        LaunchTitle((Boot2KnownTitleId)title_id, FsStorageId_None, 0, NULL);
+                    }
                 }
             }
         }

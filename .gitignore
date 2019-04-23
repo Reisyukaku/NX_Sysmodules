@@ -2,3 +2,4 @@
 **/*.kip
 **/*.nso
 **/build
+**/main

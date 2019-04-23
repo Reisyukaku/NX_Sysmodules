@@ -35,7 +35,7 @@ static std::vector<u64> g_created_titles;
 static bool g_has_initialized_fs_dev = false;
 
 /* Default to Key R, hold disables override, HBL at ReiNX/hbl.nsp. */
-static bool g_mounted_hbl_nsp = false;
+static bool g_mounted_hbl_nsp = true;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
 static bool g_override_by_default = true;
 static u64 g_override_hbl_tid = 0x010000000000100D;

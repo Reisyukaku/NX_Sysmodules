@@ -59,12 +59,6 @@ static HblOverrideConfig g_hbl_override_config = {
 /* Static buffer for loader.ini contents at runtime. */
 static char g_config_ini_data[0x800];
 
-/* Backup file for CAL0 partition. */
-static constexpr size_t ProdinfoSize = 0x8000;
-static FsFile g_cal0_file = {0};
-static u8 g_cal0_storage_backup[ProdinfoSize];
-static u8 g_cal0_backup[ProdinfoSize];
-
 static bool IsHexadecimal(const char *str) {
     while (*str) {
         if (isxdigit(*str)) {

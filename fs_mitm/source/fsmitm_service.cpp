@@ -131,7 +131,7 @@ Result FsMitmService::OpenDataStorageByCurrentProcess(Out<std::shared_ptr<IStora
     Result rc = 0;
     
     if (!this->should_override_contents) {
-        return RESULT_FORWARD_TO_SESSION;
+        return ResultAtmosphereMitmShouldForwardToSession;
     }
     
     bool has_cache = StorageCacheGetEntry(this->title_id, &storage);
@@ -184,7 +184,7 @@ Result FsMitmService::OpenDataStorageByCurrentProcess(Out<std::shared_ptr<IStora
             } else {
                 /* If we don't have anything to modify, there's no sense in maintaining a copy of the metadata tables. */
                 fsStorageClose(&data_storage);
-                rc = RESULT_FORWARD_TO_SESSION;
+                rc = ResultAtmosphereMitmShouldForwardToSession;
             }
         }
     }
@@ -199,7 +199,7 @@ Result FsMitmService::OpenDataStorageByDataId(Out<std::shared_ptr<IStorageInterf
     FsFile data_file;
     
     if (!this->should_override_contents) {
-        return RESULT_FORWARD_TO_SESSION;
+        return ResultAtmosphereMitmShouldForwardToSession;
     }
         
     std::shared_ptr<IStorageInterface> storage = nullptr;
@@ -251,7 +251,7 @@ Result FsMitmService::OpenDataStorageByDataId(Out<std::shared_ptr<IStorageInterf
             } else {
                 /* If we don't have anything to modify, there's no sense in maintaining a copy of the metadata tables. */
                 fsStorageClose(&data_storage);
-                rc = RESULT_FORWARD_TO_SESSION;
+                rc = ResultAtmosphereMitmShouldForwardToSession;
             }
         }
     }

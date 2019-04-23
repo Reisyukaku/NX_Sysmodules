@@ -231,7 +231,7 @@ Result Registration::GetServiceHandle(u64 pid, u64 service, Handle *out) {
     Registration::Service *target_service = GetService(service);
     if (target_service == NULL || ShouldInitDefer(service) || target_service->mitm_waiting_ack) {
         /* Note: This defers the result until later. */
-        return RESULT_DEFER_SESSION;
+        return ResultServiceFrameworkRequestDeferredByUser;
     }
     
     *out = 0;
@@ -300,6 +300,10 @@ Result Registration::GetServiceForPid(u64 pid, u64 service, Handle *out) {
     /* If the service has bytes after a null terminator, that's no good. */
     if (service_name_len != 8 && (service >> (8 * service_name_len))) {
         return 0xC15;
+    }
+    
+    if (GetRuntimeFirmwareVersion() >= FirmwareVersion_800 && service == EncodeNameConstant("apm:p")) {
+        return ResultSmNotAllowed;
     }
     
     if (!IsInitialProcess(pid)) {

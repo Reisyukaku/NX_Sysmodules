@@ -55,6 +55,7 @@ void __libnx_initheap(void) {
 
 void __appInit(void) {
     /* We must do no setup here, because we are sm. */
+    SetFirmwareVersionForLibnx();
 }
 
 void __appExit(void) {

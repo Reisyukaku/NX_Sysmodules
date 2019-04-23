@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
@@ -34,15 +34,14 @@ extern "C" {
 
     u32 __nx_applet_type = AppletType_None;
 
-    #define INNER_HEAP_SIZE 0x20000
+    #define INNER_HEAP_SIZE 0x30000
     size_t nx_inner_heap_size = INNER_HEAP_SIZE;
     char   nx_inner_heap[INNER_HEAP_SIZE];
-    
+
     void __libnx_initheap(void);
     void __appInit(void);
     void __appExit(void);
 }
-
 
 void __libnx_initheap(void) {
     void*  addr = nx_inner_heap;
@@ -60,10 +59,10 @@ void RegisterPrivilegedProcessesWithFs() {
     /* Ensures that all privileged processes are registered with full FS permissions. */
     constexpr u64 PRIVILEGED_PROCESS_MIN = 0;
     constexpr u64 PRIVILEGED_PROCESS_MAX = 0x4F;
-    
+
     const u32 PRIVILEGED_FAH[0x1C/sizeof(u32)] = {0x00000001, 0x00000000, 0x80000000, 0x0000001C, 0x00000000, 0x0000001C, 0x00000000};
     const u32 PRIVILEGED_FAC[0x2C/sizeof(u32)] = {0x00000001, 0x00000000, 0x80000000, 0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF};
-    
+
     u32 num_pids;
     u64 pids[PRIVILEGED_PROCESS_MAX+1];
     if (R_SUCCEEDED(svcGetProcessList(&num_pids, pids, sizeof(pids)/sizeof(pids[0])))) {
@@ -85,50 +84,50 @@ void RegisterPrivilegedProcessesWithFs() {
 void __appInit(void) {
     Result rc;
 
-    rc = smInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_SM));
-    }
-    
-    rc = fsprInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 1);
-    }
-    
-    /* This works around a bug with process permissions on < 4.0.0. */
-    RegisterPrivilegedProcessesWithFs();
-    
-    rc = smManagerAmsInitialize();
-    if (R_SUCCEEDED(rc)) {
-        smManagerAmsEndInitialDefers();
-    } else {
-        fatalSimple(0xCAFE << 4 | 2);
-    }
-    
-    rc = smManagerInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 3);
-    }
-        
-    rc = lrInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 4);
-    }
-    
-    rc = ldrPmInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 5);
-    }
-    
-    rc = splInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 6);
-    }
-    
-    rc = fsInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
-    }
+    SetFirmwareVersionForLibnx();
+
+    DoWithSmSession([&]() {
+        rc = fsprInitialize();
+        if (R_FAILED(rc))  {
+            std::abort();
+        }
+
+        /* This works around a bug with process permissions on < 4.0.0. */
+        RegisterPrivilegedProcessesWithFs();
+
+        rc = smManagerAmsInitialize();
+        if (R_SUCCEEDED(rc)) {
+            smManagerAmsEndInitialDefers();
+            smManagerAmsExit();
+        } else {
+            std::abort();
+        }
+
+        rc = smManagerInitialize();
+        if (R_FAILED(rc))  {
+            std::abort();
+        }
+
+        rc = lrInitialize();
+        if (R_FAILED(rc))  {
+            std::abort();
+        }
+
+        rc = ldrPmInitialize();
+        if (R_FAILED(rc))  {
+            std::abort();
+        }
+
+        rc = splInitialize();
+        if (R_FAILED(rc))  {
+            std::abort();
+        }
+
+        rc = fsInitialize();
+        if (R_FAILED(rc)) {
+            std::abort();
+        }
+    });
 }
 
 void __appExit(void) {
@@ -140,37 +139,34 @@ void __appExit(void) {
     fsprExit();
     lrExit();
     fsExit();
-    smExit();
 }
 
 int main(int argc, char **argv)
 {
-    Thread process_track_thread = {0};
+    HosThread process_track_thread;
     consoleDebugInit(debugDevice_SVC);
-    
+
     /* Initialize and spawn the Process Tracking thread. */
     Registration::InitializeSystemResources();
-    if (R_FAILED(threadCreate(&process_track_thread, &ProcessTracking::MainLoop, NULL, 0x4000, 0x15, 0))) {
-        /* TODO: Panic. */
+    if (R_FAILED(process_track_thread.Initialize(&ProcessTracking::MainLoop, NULL, 0x4000, 0x15))) {
+        std::abort();
     }
-    if (R_FAILED(threadStart(&process_track_thread))) {
-        /* TODO: Panic. */
+    if (R_FAILED(process_track_thread.Start())) {
+        std::abort();
     }
-    
-    /* TODO: What's a good timeout value to use here? */
-    auto server_manager = new WaitableManager(1);
-        
+
+    /* Create Server Manager. */
+    static auto s_server_manager = WaitableManager(1);
+
     /* TODO: Create services. */
-    server_manager->AddWaitable(new ServiceServer<ShellService>("pm:shell", 3));
-    server_manager->AddWaitable(new ServiceServer<DebugMonitorService>("pm:dmnt", 2));
-    server_manager->AddWaitable(new ServiceServer<BootModeService>("pm:bm", 5));
-    server_manager->AddWaitable(new ServiceServer<InformationService>("pm:info", 1));
+    s_server_manager.AddWaitable(new ServiceServer<ShellService>("pm:shell", 3));
+    s_server_manager.AddWaitable(new ServiceServer<DebugMonitorService>("pm:dmnt", 2));
+    s_server_manager.AddWaitable(new ServiceServer<BootModeService>("pm:bm", 6));
+    s_server_manager.AddWaitable(new ServiceServer<InformationService>("pm:info", 2));
     
     /* Loop forever, servicing our services. */
-    server_manager->Process();
-    
-    /* Cleanup. */
-    delete server_manager;
+    s_server_manager.Process();
+
     return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,12 +44,24 @@ class ProcessWaiter final : public IWaitable {
 
 class ProcessList final {
     private:      
-        HosRecursiveMutex mutex;
+        HosRecursiveMutex m;
+
+        HosRecursiveMutex *GetMutex() {
+            return &this->m;
+        }
     public:
         std::vector<std::shared_ptr<Registration::Process>> processes;
         
-        auto GetUniqueLock() {
-            return std::unique_lock{this->mutex};
+        void lock() {
+            GetMutex()->lock();
+        }
+        
+        void unlock() {
+            GetMutex()->unlock();
+        }
+        
+        void try_lock() {
+            GetMutex()->try_lock();
         }
 };
 

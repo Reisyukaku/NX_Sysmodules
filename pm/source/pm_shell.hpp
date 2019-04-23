@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,8 +19,6 @@
 #include <stratosphere.hpp>
 
 #include "pm_registration.hpp"
-
-#define BOOT2_TITLE_ID (0x0100000000000008ULL)
 
 enum ShellCmd {
     Shell_Cmd_LaunchProcess = 0,
@@ -43,7 +41,10 @@ enum ShellCmd_5X {
     Shell_Cmd_5X_GetProcessEventType = 4,
     Shell_Cmd_5X_NotifyBootFinished = 5,
     Shell_Cmd_5X_GetApplicationProcessId = 6,
-    Shell_Cmd_5X_BoostSystemMemoryResourceLimit = 7
+    Shell_Cmd_5X_BoostSystemMemoryResourceLimit = 7,
+    
+    Shell_Cmd_BoostSystemThreadsResourceLimit = 8,
+    Shell_Cmd_GetUnimplementedEventHandle = 9 /* TODO: Rename when Nintendo implements this. */
 };
 
 class ShellService final : public IServiceObject {    
@@ -59,6 +60,8 @@ class ShellService final : public IServiceObject {
         void NotifyBootFinished();
         Result GetApplicationProcessId(Out<u64> pid);
         Result BoostSystemMemoryResourceLimit(u64 sysmem_size);
+        Result BoostSystemThreadsResourceLimit();
+        Result GetUnimplementedEventHandle(Out<CopiedHandle> event);
     public:
         DEFINE_SERVICE_DISPATCH_TABLE {
             /* 1.0.0-4.0.0 */
@@ -84,5 +87,11 @@ class ShellService final : public IServiceObject {
             MakeServiceCommandMeta<Shell_Cmd_5X_NotifyBootFinished, &ShellService::NotifyBootFinished, FirmwareVersion_500>(),
             MakeServiceCommandMeta<Shell_Cmd_5X_GetApplicationProcessId, &ShellService::GetApplicationProcessId, FirmwareVersion_500>(),
             MakeServiceCommandMeta<Shell_Cmd_5X_BoostSystemMemoryResourceLimit, &ShellService::BoostSystemMemoryResourceLimit, FirmwareVersion_500>(),
+            
+            /* 7.0.0-* */
+            MakeServiceCommandMeta<Shell_Cmd_BoostSystemThreadsResourceLimit, &ShellService::BoostSystemThreadsResourceLimit, FirmwareVersion_700>(),
+            
+            /* 8.0.0-* */
+            MakeServiceCommandMeta<Shell_Cmd_GetUnimplementedEventHandle, &ShellService::GetUnimplementedEventHandle, FirmwareVersion_800>(),
         };
 };

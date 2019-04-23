@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,24 +28,24 @@ Result ShellService::LaunchProcess(Out<u64> pid, Registration::TidSid tid_sid, u
 }
 
 Result ShellService::TerminateProcessId(u64 pid) {
-    auto auto_lock = Registration::GetProcessListUniqueLock();
+    std::scoped_lock<ProcessList &> lk(Registration::GetProcessList());
     
     auto proc = Registration::GetProcess(pid);
     if (proc != nullptr) {
         return svcTerminateProcess(proc->handle);
     } else {
-        return 0x20F;
+        return ResultPmProcessNotFound;
     }
 }
 
 Result ShellService::TerminateTitleId(u64 tid) {
-    auto auto_lock = Registration::GetProcessListUniqueLock();
+    std::scoped_lock<ProcessList &> lk(Registration::GetProcessList());
     
     auto proc = Registration::GetProcessByTitleId(tid);
     if (proc != NULL) {
         return svcTerminateProcess(proc->handle);
     } else {
-        return 0x20F;
+        return ResultPmProcessNotFound;
     }
 }
 
@@ -58,28 +58,28 @@ void ShellService::GetProcessEventType(Out<u64> type, Out<u64> pid) {
 }
 
 Result ShellService::FinalizeExitedProcess(u64 pid) {
-    auto auto_lock = Registration::GetProcessListUniqueLock();
+    std::scoped_lock<ProcessList &> lk(Registration::GetProcessList());
     
     auto proc = Registration::GetProcess(pid);
     if (proc == NULL) {
-        return 0x20F;
+        return ResultPmProcessNotFound;
     } else if (proc->state != ProcessState_Exited) {
-        return 0x60F;
+        return ResultPmNotExited;
     } else {
         Registration::FinalizeExitedProcess(proc);
-        return 0x0;
+        return ResultSuccess;
     }
 }
 
 Result ShellService::ClearProcessNotificationFlag(u64 pid) {
-    auto auto_lock = Registration::GetProcessListUniqueLock();
+    std::scoped_lock<ProcessList &> lk(Registration::GetProcessList());
     
     auto proc = Registration::GetProcess(pid);
     if (proc != NULL) {
         proc->flags &= ~PROCESSFLAGS_CRASHED;
-        return 0x0;
+        return ResultSuccess;
     } else {
-        return 0x20F;
+        return ResultPmProcessNotFound;
     }
 }
 
@@ -91,16 +91,35 @@ void ShellService::NotifyBootFinished() {
 }
 
 Result ShellService::GetApplicationProcessId(Out<u64> pid) {
-    auto auto_lock = Registration::GetProcessListUniqueLock();
+    std::scoped_lock<ProcessList &> lk(Registration::GetProcessList());
     
     std::shared_ptr<Registration::Process> app_proc;
     if (Registration::HasApplicationProcess(&app_proc)) {
         pid.SetValue(app_proc->pid);
-        return 0;
+        return ResultSuccess;
     }
-    return 0x20F;
+    return ResultPmProcessNotFound;
 }
 
 Result ShellService::BoostSystemMemoryResourceLimit(u64 sysmem_size) {
     return ResourceLimitUtils::BoostSystemMemoryResourceLimit(sysmem_size);
+}
+
+Result ShellService::BoostSystemThreadsResourceLimit() {
+    /* Starting in 7.0.0, Nintendo reduces the number of system threads from 0x260 to 0x60, */
+    /* Until this command is called to double that amount to 0xC0. */
+    /* We will simply not reduce the number of system threads available for no reason. */
+    return ResultSuccess;
+}
+
+
+Result ShellService::GetUnimplementedEventHandle(Out<CopiedHandle> event) {
+    /* In 8.0.0, Nintendo added this command which should return an event handle. */
+    /* In addition, they also added code to create a new event in the global PM constructor. */
+    /* However, nothing signals this event, and this command currently does std::abort();. */
+    /* We will oblige. */
+    std::abort();
+    
+    /* TODO: Return an event handle, once N makes this command a real thing in the future. */
+    /* TODO: return ResultSuccess; */
 }

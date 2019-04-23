@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,8 @@
 #include <stratosphere.hpp>
 #include <memory>
 #include <mutex>
+
+class ProcessList;
 
 #define LAUNCHFLAGS_NOTIFYWHENEXITED(flags) (flags & 1)
 #define LAUNCHFLAGS_STARTSUSPENDED(flags) (flags & (kernelAbove500() ? 0x10 : 0x2))
@@ -171,7 +173,7 @@ class Registration {
 
         static void InitializeSystemResources();
         static IWaitable *GetProcessLaunchStartEvent();
-        static std::unique_lock<HosRecursiveMutex> GetProcessListUniqueLock();
+        static ProcessList &GetProcessList();
         static Result ProcessLaunchStartCallback(u64 timeout);
         
         static Result HandleSignaledProcess(std::shared_ptr<Process> process);
@@ -201,3 +203,4 @@ class Registration {
         static bool HasApplicationProcess(std::shared_ptr<Process> *out);
 };
 
+#include "pm_process_wait.hpp"

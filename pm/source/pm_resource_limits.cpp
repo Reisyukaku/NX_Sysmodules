@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,7 +72,7 @@ static u64 g_system_boost_size = 0;
 
 /* Tries to set Resource limits for a category. */
 static Result SetResourceLimits(ResourceLimitUtils::ResourceLimitCategory category, u64 new_memory_size) {
-    Result rc = 0;
+    Result rc = ResultSuccess;
     u64 old_memory_size = g_resource_limits[category][LimitableResource_Memory];
     g_resource_limits[category][LimitableResource_Memory] = new_memory_size;
     for (unsigned int r = 0; r < 5; r++) {
@@ -86,7 +86,7 @@ static Result SetResourceLimits(ResourceLimitUtils::ResourceLimitCategory catego
 
 
 static Result SetNewMemoryResourceLimit(ResourceLimitUtils::ResourceLimitCategory category, u64 new_memory_size) {
-    Result rc = 0;
+    Result rc = ResultSuccess;
     u64 old_memory_size = g_resource_limits[category][LimitableResource_Memory];
     g_resource_limits[category][LimitableResource_Memory] = new_memory_size;
     if (R_FAILED((rc = svcSetResourceLimitLimitValue(g_resource_limit_handles[category], LimitableResource_Memory, g_resource_limits[category][LimitableResource_Memory])))) {
@@ -121,6 +121,9 @@ void ResourceLimitUtils::InitializeLimits() {
         memcpy(&g_memory_resource_limits, &g_memory_resource_limits_deprecated, sizeof(g_memory_resource_limits_deprecated));
         memcpy(&g_resource_limits, &g_resource_limits_deprecated, sizeof(g_resource_limits));
     }
+    
+    /* 7.0.0+: Nintendo restricts the number of system threads here, from 0x260 -> 0x60. */
+    /* We will not do this. */
     
     if (kernelAbove600()) {
         /* NOTE: 5 is a fake type, official code does not do this. */
@@ -182,8 +185,8 @@ void ResourceLimitUtils::InitializeLimits() {
     /* Atmosphere: Allocate extra memory (24 MiB) to SYSTEM away from Applet. */
     for (unsigned int i = 0; i < 6; i++) {
         g_memory_resource_limits[i][0] += ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
-        /* On < 4.0.0, taking from application instead of applet fixes a rare hang on boot. */
-        if (kernelAbove400()) {
+        /* On < 3.0.0, taking from application instead of applet fixes a rare hang on boot. */
+        if (kernelAbove300()) {
             g_memory_resource_limits[i][2] -= ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
         } else {
             g_memory_resource_limits[i][1] -= ATMOSPHERE_EXTRA_SYSTEM_MEMORY_FOR_SYSMODULES;
@@ -234,9 +237,9 @@ Handle ResourceLimitUtils::GetResourceLimitHandleByCategory(ResourceLimitCategor
 }
 
 Result ResourceLimitUtils::BoostSystemMemoryResourceLimit(u64 boost_size) {
-    Result rc = 0;
+    Result rc = ResultSuccess;
     if (boost_size > g_memory_resource_limits[g_memory_limit_type][ResourceLimitCategory_Application]) {
-        return 0xC0F;
+        return ResultPmInvalidSize;
     }
     u64 app_size = g_memory_resource_limits[g_memory_limit_type][ResourceLimitCategory_Application] - boost_size;
     if (kernelAbove500()) {
@@ -273,7 +276,7 @@ Result ResourceLimitUtils::BoostSystemMemoryResourceLimit(u64 boost_size) {
             }
         }
     } else {
-        rc = 0xF601;
+        rc = ResultKernelConnectionClosed;
     }
     if (R_SUCCEEDED(rc)) {
         g_system_boost_size = boost_size;

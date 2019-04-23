@@ -3,7 +3,7 @@
 #include <stratosphere.hpp>
 
 enum RNXServiceCmd {
-    RNX_GetVersion = 0,
+    RNX_CMD_GetVersion = 0,
 };
 
 class RNXService final : public IServiceObject {        
@@ -12,6 +12,6 @@ class RNXService final : public IServiceObject {
         Result RNX_GetVersion();
     public:
         DEFINE_SERVICE_DISPATCH_TABLE {
-            MakeServiceCommandMeta<RNX_GetVersion, &RNXService::RNX_GetVersion>(),
+            MakeServiceCommandMeta<RNX_CMD_GetVersion, &RNXService::RNX_GetVersion>(),
         };
 };

@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include "ldr_rei.hpp"
 
-Result RNXService::RNX_0() {
+Result RNXService::RNX_GetVersion() {
     u32 ret = 0;
-    //Hello~!
+    //STUB
     return 0;
 }

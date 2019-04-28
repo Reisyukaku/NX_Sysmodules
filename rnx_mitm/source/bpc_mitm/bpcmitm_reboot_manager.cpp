@@ -29,7 +29,7 @@ static BpcRebootType g_reboot_type = BpcRebootType::ToPayload;
 void BpcRebootManager::Initialize() {
     /* Open payload file. */
     FsFile payload_file;
-    if (R_FAILED(Utils::OpenSdFile("/ReiNX/reboot_payload.bin", FS_OPEN_READ, &payload_file))) {
+    if (R_FAILED(Utils::OpenSdFile("/ReiNX.bin", FS_OPEN_READ, &payload_file))) {
         return;
     }
     ON_SCOPE_EXIT { fsFileClose(&payload_file); };

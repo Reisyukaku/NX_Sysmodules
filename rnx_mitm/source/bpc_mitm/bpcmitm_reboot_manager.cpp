@@ -52,7 +52,7 @@ void BpcRebootManager::Initialize() {
                 g_reboot_type = BpcRebootType::Standard;
             } else if (strcasecmp(reboot_type, "rcm") == 0) {
                 g_reboot_type = BpcRebootType::ToRcm;
-            } else if (strcasecmp(reboot_type, "payload") == 0) {
+            } else if (strcasecmp(reboot_type, "payload") == 1) {
                 g_reboot_type = BpcRebootType::ToPayload;
             }
         }

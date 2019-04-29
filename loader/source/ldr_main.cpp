@@ -28,7 +28,6 @@
 #include "ldr_ro_service.hpp"
 #include "ldr_tx.hpp"
 #include "ldr_usbfs.hpp"
-#include "ldr_cht.hpp"
 #include "ldr_rei.hpp"
 
 extern "C" {
@@ -112,7 +111,6 @@ int main(int argc, char **argv)
     server_manager->AddWaitable(new ServiceServer<RNXService>("rnx", 1));
     server_manager->AddWaitable(new ServiceServer<UsbfsService>("usbfs", 1));
     server_manager->AddWaitable(new ServiceServer<TXService>("tx", 1));
-    server_manager->AddWaitable(new ServiceServer<CheatService>("ldr:cht", 1));
     server_manager->AddWaitable(new ServiceServer<ProcessManagerService>("ldr:pm", 1));
     server_manager->AddWaitable(new ServiceServer<ShellService>("ldr:shel", 3));
     server_manager->AddWaitable(new ServiceServer<DebugMonitorService>("ldr:dmnt", 2));

@@ -162,10 +162,7 @@ Result FsMitmService::OpenFileSystemWithId(Out<std::shared_ptr<IFileSystemInterf
 }
 
 Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInterface>> out_fs, u8 space_id, FsSave save_struct) {
-    bool should_redirect_saves = false;
-    if (R_FAILED(Utils::GetSettingsItemBooleanValue("ReiNX", "fsmitm_redirect_saves_to_sd", &should_redirect_saves))) {
-        return ResultAtmosphereMitmShouldForwardToSession;
-    }
+    bool should_redirect_saves = true;
 
     /* For now, until we're sure this is robust, only intercept normal savedata. */
     if (!should_redirect_saves || save_struct.SaveDataType != FsSaveDataType_SaveData) {
@@ -260,10 +257,12 @@ Result FsMitmService::OpenBisStorage(Out<std::shared_ptr<IStorageInterface>> out
         if (R_SUCCEEDED(rc)) {
             const bool is_sysmodule = TitleIdIsSystem(this->title_id);
             const bool has_bis_write_flag = Utils::HasFlag(this->title_id, "bis_write");
+            const bool has_cal0_read_flag = Utils::HasFlag(this->title_id, "cal_read");
             if (bis_partition_id == BisStorageId_Boot0) {
                 storage = std::make_shared<IStorageInterface>(new Boot0Storage(bis_storage, this->title_id));
             } else if (bis_partition_id == BisStorageId_Prodinfo) {
-                if (is_sysmodule) {
+                /* PRODINFO should *never* be writable. */
+                if (is_sysmodule || has_cal0_read_flag) {
                     storage = std::make_shared<IStorageInterface>(new ROProxyStorage(bis_storage));
                 } else {
                     /* Do not allow non-sysmodules to read *or* write CAL0. */

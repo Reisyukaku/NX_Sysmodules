@@ -112,10 +112,10 @@ Result FsSaveUtils::GetSaveDataDirectoryPath(FsPath &out_path, u8 space_id, u8 s
     const bool is_system = (save_id != 0 && user_id == 0);
     size_t out_path_len;
     if (is_system) {
-        out_path_len = static_cast<size_t>(snprintf(out_path.str, sizeof(out_path.str), "/reinx/saves/sysnand/%s/%s/%016lx",
+        out_path_len = static_cast<size_t>(snprintf(out_path.str, sizeof(out_path.str), "/ReiNX/saves/sysnand/%s/%s/%016lx",
                                                     space_id_str, save_type_str, save_id));
     } else {
-        out_path_len = static_cast<size_t>(snprintf(out_path.str, sizeof(out_path.str), "/reinx/saves/sysnand/%s/%s/%016lx/%016lx%016lx",
+        out_path_len = static_cast<size_t>(snprintf(out_path.str, sizeof(out_path.str), "/ReiNX/saves/sysnand/%s/%s/%016lx/%016lx%016lx",
                                                     space_id_str, save_type_str, title_id, static_cast<u64>(user_id >> 64ul), static_cast<u64>(user_id)));
     }
     if (out_path_len >= sizeof(out_path)) {

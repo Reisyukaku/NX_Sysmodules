@@ -29,7 +29,7 @@ static BpcRebootType g_reboot_type = BpcRebootType::ToPayload;
 void BpcRebootManager::Initialize() {
     /* Open payload file. */
     FsFile payload_file;
-    if (R_FAILED(Utils::OpenSdFile("/ReiNX/reboot_payload.bin", FS_OPEN_READ, &payload_file))) {
+    if (R_FAILED(Utils::OpenSdFile("/ReiNX.bin", FS_OPEN_READ, &payload_file))) {
         return;
     }
     ON_SCOPE_EXIT { fsFileClose(&payload_file); };
@@ -47,15 +47,7 @@ void BpcRebootManager::Initialize() {
     {
         char reboot_type[0x40] = {0};
         u64 reboot_type_size = 0;
-        if (R_SUCCEEDED(Utils::GetSettingsItemValue("ReiNX", "power_menu_reboot_function", reboot_type, sizeof(reboot_type)-1, &reboot_type_size))) {
-            if (strcasecmp(reboot_type, "stock") == 0 || strcasecmp(reboot_type, "normal") == 0 || strcasecmp(reboot_type, "standard") == 0) {
-                g_reboot_type = BpcRebootType::Standard;
-            } else if (strcasecmp(reboot_type, "rcm") == 0) {
-                g_reboot_type = BpcRebootType::ToRcm;
-            } else if (strcasecmp(reboot_type, "payload") == 0) {
-                g_reboot_type = BpcRebootType::ToPayload;
-            }
-        }
+        g_reboot_type = BpcRebootType::ToPayload;
     }
 }
 

@@ -38,7 +38,8 @@ static bool g_has_initialized_fs_dev = false;
 static bool g_mounted_hbl_nsp = false;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
 static bool g_override_by_default = true;
-static u64 g_override_hbl_tid = 0x010000000000100D;
+
+u64 ContentManagement::HbOverrideTid = 0x010000000000100D;
 
 /* Static buffer for loader.ini contents at runtime. */
 static char g_config_ini_data[0x800];
@@ -118,7 +119,11 @@ Result ContentManagement::MountCodeNspOnSd(u64 tid) {
     
     if (R_SUCCEEDED(rc)) {
         fsdevMountDevice("code", g_CodeFileSystem);
+    }
+    
+    if(tid == HbOverrideTid) {
         TryMountHblNspOnSd();
+        rc = 0;
     }
     
     return rc;
@@ -217,7 +222,7 @@ void ContentManagement::TryMountSdCard() {
 }
 
 bool ContentManagement::ShouldReplaceWithHBL(u64 tid) {
-    return g_mounted_hbl_nsp && tid == g_override_hbl_tid;
+    return g_mounted_hbl_nsp && tid == HbOverrideTid;
 }
 
 bool ContentManagement::ShouldOverrideContents(u64 tid) {

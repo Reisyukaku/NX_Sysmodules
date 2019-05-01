@@ -38,6 +38,8 @@ class ContentManagement {
         
         static bool ShouldReplaceWithHBL(u64 tid);
         static bool ShouldOverrideContents(u64 tid);
+        
+        static u64 HbOverrideTid;
 
         /* SetExternalContentSource extension */
         class ExternalContentSource {

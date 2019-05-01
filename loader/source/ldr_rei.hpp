@@ -11,7 +11,7 @@ enum RNXServiceCmd {
 class RNXService final : public IServiceObject {        
     private:
         /* Actual commands. */
-        Result GetReiNXVersion();
+        Result GetReiNXVersion(Out<u32> maj, Out<u32> min);
         Result SetHbTidForDelta(u64 tid);
     public:
         DEFINE_SERVICE_DISPATCH_TABLE {

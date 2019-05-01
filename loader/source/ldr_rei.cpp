@@ -3,9 +3,10 @@
 #include <stdio.h>
 #include "ldr_rei.hpp"
 
-Result RNXService::GetReiNXVersion() {
+Result RNXService::GetReiNXVersion(Out<u32> maj, Out<u32> min) {
     u32 ret = 0;
-    //STUB
+    *maj.GetPointer() = VERSION_MAJOR;
+    *min.GetPointer() = VERSION_MINOR;
     return 0;
 }
 

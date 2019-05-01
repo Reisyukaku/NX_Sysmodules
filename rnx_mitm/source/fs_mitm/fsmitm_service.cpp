@@ -163,7 +163,7 @@ Result FsMitmService::OpenFileSystemWithId(Out<std::shared_ptr<IFileSystemInterf
 
 Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInterface>> out_fs, u8 space_id, FsSave save_struct) {
     bool should_redirect_saves = false;
-    if (R_FAILED(Utils::GetSettingsItemBooleanValue("ReiNX", "fsmitm_redirect_saves_to_sd", &should_redirect_saves))) {
+    if (R_FAILED(Utils::GetSettingsItemBooleanValue("reinx", "fsmitm_redirect_saves_to_sd", &should_redirect_saves))) {
         return ResultAtmosphereMitmShouldForwardToSession;
     }
 

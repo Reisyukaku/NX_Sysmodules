@@ -162,11 +162,16 @@ Result FsMitmService::OpenFileSystemWithId(Out<std::shared_ptr<IFileSystemInterf
 }
 
 Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInterface>> out_fs, u8 space_id, FsSave save_struct) {
-    bool should_redirect_saves = false;
-    if (R_FAILED(Utils::GetSettingsItemBooleanValue("reinx", "fsmitm_redirect_saves_to_sd", &should_redirect_saves))) {
+    static bool should_redirect_saves = false;
+
+    FsFile flag_file;
+    if (!should_redirect_saves && R_FAILED(Utils::OpenSdFile("/ReiNX/saveredirection", FS_OPEN_READ, &flag_file))) { //maybe change the flag name?
         return ResultAtmosphereMitmShouldForwardToSession;
     }
-
+    if (!should_redirect_saves)
+        fsFileClose(&flag_file);
+    should_redirect_saves = true;
+    
     /* For now, until we're sure this is robust, only intercept normal savedata. */
     if (!should_redirect_saves || save_struct.SaveDataType != FsSaveDataType_SaveData) {
         return ResultAtmosphereMitmShouldForwardToSession;

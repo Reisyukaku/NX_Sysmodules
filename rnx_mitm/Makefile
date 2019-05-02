@@ -9,13 +9,6 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
 
-AMSBRANCH := $(shell git symbolic-ref --short HEAD)
-AMSREV := $(AMSBRANCH)-$(shell git rev-parse --short HEAD)
-
-ifneq (, $(strip $(shell git status --porcelain 2>/dev/null)))
-    AMSREV := $(AMSREV)-dirty
-endif
-
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -31,7 +24,10 @@ DATA		:=	data
 INCLUDES	:=	include ../../common/include
 EXEFS_SRC	:=	exefs_src
 
-DEFINES	:=	-DDISABLE_IPC -DATMOSPHERE_GIT_BRANCH=\"$(AMSBRANCH)\" -DATMOSPHERE_GIT_REV=\"$(AMSREV)\"
+ver_maj ?= 0
+ver_min ?= 0
+
+DEFINES	:=	-DDISABLE_IPC -DVERSION_MAJOR='$(ver_maj)' -DVERSION_MINOR='$(ver_min)'
 
 #---------------------------------------------------------------------------------
 # options for code generation

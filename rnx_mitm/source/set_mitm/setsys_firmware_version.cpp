@@ -61,7 +61,7 @@ void VersionManager::Initialize() {
     {
         char display_version[sizeof(g_ams_fw_version.display_version)] = {0};
         
-        snprintf(display_version, sizeof(display_version), "%s ReiNX (2.2.1)", g_ams_fw_version.display_version);
+        snprintf(display_version, sizeof(display_version), "%s ReiNX(%s.%s)", g_ams_fw_version.display_version, VERSION_MAJOR, VERSION_MINOR);
 
         memcpy(g_ams_fw_version.display_version, display_version, sizeof(g_ams_fw_version.display_version));
     }

@@ -24,6 +24,9 @@ DATA		:=	data
 INCLUDES	:=	include ../../common/include
 EXEFS_SRC	:=	exefs_src
 
+ver_maj ?= 0
+ver_min ?= 0
+
 DEFINES	:=	-DDISABLE_IPC
 
 #---------------------------------------------------------------------------------
@@ -34,7 +37,7 @@ ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DVERSION_MAJOR='$(ver_maj)' -DVERSION_MINOR='$(ver_min)'
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++17
 

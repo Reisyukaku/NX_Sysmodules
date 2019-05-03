@@ -95,56 +95,6 @@ void Utils::InitializeThreadFunc(void *args) {
         svcSleepThread(1000000ULL);
     }
     
-    /* Back up CAL0, if it's not backed up already. */
-    fsFsCreateDirectory(&g_sd_filesystem, "/ReiNX/automatic_backups");
-    {
-        FsStorage cal0_storage;
-        if (R_FAILED(fsOpenBisStorage(&cal0_storage, BisStorageId_Prodinfo)) || R_FAILED(fsStorageRead(&cal0_storage, 0, g_cal0_storage_backup, ProdinfoSize))) {
-            std::abort();
-        }
-        fsStorageClose(&cal0_storage);
-        
-        char serial_number[0x40] = {0};
-        memcpy(serial_number, g_cal0_storage_backup + 0x250, 0x18);
-        
-        
-        char prodinfo_backup_path[FS_MAX_PATH] = {0};
-        if (strlen(serial_number) > 0) {
-            snprintf(prodinfo_backup_path, sizeof(prodinfo_backup_path) - 1, "/ReiNX/automatic_backups/%s_PRODINFO.bin", serial_number);
-        } else {
-            snprintf(prodinfo_backup_path, sizeof(prodinfo_backup_path) - 1, "/ReiNX/automatic_backups/PRODINFO.bin");
-        }
-        
-        fsFsCreateFile(&g_sd_filesystem, prodinfo_backup_path, ProdinfoSize, 0);
-        if (R_SUCCEEDED(fsFsOpenFile(&g_sd_filesystem, prodinfo_backup_path, FS_OPEN_READ | FS_OPEN_WRITE, &g_cal0_file))) {
-            bool has_auto_backup = false;
-            size_t read = 0;
-            if (R_SUCCEEDED(fsFileRead(&g_cal0_file, 0, g_cal0_backup, sizeof(g_cal0_backup), &read)) && read == sizeof(g_cal0_backup)) {
-                bool is_cal0_valid = true;
-                is_cal0_valid &= memcmp(g_cal0_backup, "CAL0", 4) == 0;
-                is_cal0_valid &= memcmp(g_cal0_backup + 0x250, serial_number, 0x18) == 0;
-                u32 cal0_size = ((u32 *)g_cal0_backup)[2];
-                is_cal0_valid &= cal0_size + 0x40 <= ProdinfoSize;
-                if (is_cal0_valid) {
-                    u8 calc_hash[0x20];
-                    sha256CalculateHash(calc_hash, g_cal0_backup + 0x40, cal0_size);
-                    is_cal0_valid &= memcmp(calc_hash, g_cal0_backup + 0x20, sizeof(calc_hash)) == 0;
-                }
-                has_auto_backup = is_cal0_valid;
-            }
-            
-            if (!has_auto_backup) {
-                fsFileSetSize(&g_cal0_file, ProdinfoSize);
-                fsFileWrite(&g_cal0_file, 0, g_cal0_storage_backup, ProdinfoSize);
-                fsFileFlush(&g_cal0_file);
-            }
-            
-            /* NOTE: g_cal0_file is intentionally not closed here. This prevents any other process from opening it. */
-            memset(g_cal0_storage_backup, 0, sizeof(g_cal0_storage_backup));
-            memset(g_cal0_backup, 0, sizeof(g_cal0_backup));
-        }
-    }
-    
     /* Check for MitM flags. */
     FsDir titles_dir;
     if (R_SUCCEEDED(fsFsOpenDirectory(&g_sd_filesystem, "/ReiNX/titles", FS_DIROPEN_DIRECTORY, &titles_dir))) {

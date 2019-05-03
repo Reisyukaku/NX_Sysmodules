@@ -74,7 +74,6 @@ void __appInit(void) {
     if (R_FAILED(rc)) {
         fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
     }
-        
     
     rc = lrInitialize();
     if (R_FAILED(rc))  {
@@ -105,9 +104,9 @@ struct LoaderServerOptions {
 int main(int argc, char **argv)
 {
     consoleDebugInit(debugDevice_SVC);
-            
+    
     auto server_manager = new WaitableManager<LoaderServerOptions>(1);
-        
+    
     /* Add services to manager. */
     server_manager->AddWaitable(new ServiceServer<RNXService>("rnx", 1));
     server_manager->AddWaitable(new ServiceServer<UsbfsService>("usbfs", 1));
@@ -120,7 +119,7 @@ int main(int argc, char **argv)
         /* On 1.0.0-2.3.0, Loader services ldr:ro instead of ro. */
         server_manager->AddWaitable(new ServiceServer<RelocatableObjectsService>("ldr:ro", 0x20));
     }
-        
+    
     /* Loop forever, servicing our services. */
     server_manager->Process();
     

@@ -172,6 +172,7 @@ Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInte
         fsFileClose(&flag_file);
     should_redirect_saves = true;
     
+
     /* For now, until we're sure this is robust, only intercept normal savedata. */
     if (!should_redirect_saves || save_struct.SaveDataType != FsSaveDataType_SaveData) {
         return ResultAtmosphereMitmShouldForwardToSession;

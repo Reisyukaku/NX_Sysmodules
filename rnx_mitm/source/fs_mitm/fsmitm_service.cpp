@@ -270,7 +270,7 @@ Result FsMitmService::OpenBisStorage(Out<std::shared_ptr<IStorageInterface>> out
                 storage = std::make_shared<IStorageInterface>(new Boot0Storage(bis_storage, this->title_id));
             } else if (bis_partition_id == BisStorageId_Prodinfo) {
                 if (is_sysmodule) {
-                    storage = std::make_shared<IStorageInterface>(new ROProxyStorage(bis_storage));
+                    storage = std::make_shared<IStorageInterface>(new ProxyStorage(bis_storage));
                 } else {
                     /* Do not allow non-sysmodules to read *or* write CAL0. */
                     fsStorageClose(&bis_storage);

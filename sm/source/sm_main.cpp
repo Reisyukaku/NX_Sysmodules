@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 
 #include "sm_manager_service.hpp"
 #include "sm_user_service.hpp"
+#include "sm_dmnt_service.hpp"
 #include "sm_registration.hpp"
 
 extern "C" {
@@ -38,6 +39,17 @@ extern "C" {
     void __libnx_initheap(void);
     void __appInit(void);
     void __appExit(void);
+
+    /* Exception handling. */
+    alignas(16) u8 __nx_exception_stack[0x1000];
+    u64 __nx_exception_stack_size = sizeof(__nx_exception_stack);
+    void __libnx_exception_handler(ThreadExceptionDump *ctx);
+    u64 __stratosphere_title_id = TitleId_Sm;
+    void __libstratosphere_exception_handler(AtmosphereFatalErrorContext *ctx);
+}
+
+void __libnx_exception_handler(ThreadExceptionDump *ctx) {
+    StratosphereCrashHandler(ctx);
 }
 
 
@@ -54,8 +66,9 @@ void __libnx_initheap(void) {
 }
 
 void __appInit(void) {
-    /* We must do no setup here, because we are sm. */
     SetFirmwareVersionForLibnx();
+    
+    /* We must do no service setup here, because we are sm. */
 }
 
 void __appExit(void) {
@@ -71,7 +84,7 @@ int main(int argc, char **argv)
     
     /* TODO: What's a good timeout value to use here? */
     auto server_manager = new WaitableManager(1);
-            
+
     /* Create sm:, (and thus allow things to register to it). */
     server_manager->AddWaitable(new ManagedPortServer<UserService>("sm:", 0x40));
         
@@ -83,6 +96,17 @@ int main(int argc, char **argv)
     }
     
     server_manager->AddWaitable(new ExistingPortServer<ManagerService>(smm_h, 1));
+    
+    /*===== ATMOSPHERE EXTENSION =====*/
+    /* Create sm:dmnt manually. */
+    Handle smdmnt_h;
+    if (R_FAILED(Registration::RegisterServiceForSelf(smEncodeName("sm:dmnt"), 1, false, &smdmnt_h))) {
+        /* TODO: Panic. */
+        while (1) { }
+    }
+    
+    server_manager->AddWaitable(new ExistingPortServer<DmntService>(smm_h, 1));;
+    /*================================*/
         
     /* Loop forever, servicing our services. */
     server_manager->Process();

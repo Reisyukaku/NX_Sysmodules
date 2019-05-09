@@ -253,7 +253,7 @@ void EmbeddedBoot2::Main() {
     LaunchTitle(TitleId_Tma, FsStorageId_NandSystem, 0, NULL);
 
     /* Launch Atmosphere dmnt, using FsStorageId_None to force SD card boot. */
-    LaunchTitle(TitleId_Dmnt, FsStorageId_None, 0, NULL);
+    // LaunchTitle(TitleId_Dmnt, FsStorageId_None, 0, NULL);
 
     /* Launch default programs. */
     for (auto &launch_program : g_additional_launch_programs) {

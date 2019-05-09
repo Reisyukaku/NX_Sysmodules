@@ -14,22 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#pragma once
-struct SmServiceName {
-    char name[sizeof(u64)];
-};
+#include <switch.h>
+#include <string.h>
+#include <stratosphere.hpp>
 
-static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");
+#include "dmnt_hid.hpp"
 
-/* For Debug Monitor extensions. */
-struct SmServiceRecord {
-    u64 service_name;
-    u64 owner_pid;
-    u64 max_sessions;
-    u64 mitm_pid;
-    u64 mitm_waiting_ack_pid;
-    bool is_light;
-    bool mitm_waiting_ack;
-};
+static HosMutex g_hid_keys_down_lock;
 
-static_assert(sizeof(SmServiceRecord) == 0x30, "SmServiceRecord definition!");
+Result HidManagement::GetKeysDown(u64 *keys) {
+    std::scoped_lock<HosMutex> lk(g_hid_keys_down_lock);
+    
+    hidScanInput();
+    *keys = hidKeysHeld(CONTROLLER_P1_AUTO);
+    
+    return ResultSuccess;
+}

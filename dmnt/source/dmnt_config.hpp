@@ -15,21 +15,17 @@
  */
  
 #pragma once
-struct SmServiceName {
-    char name[sizeof(u64)];
+#include <switch.h>
+
+struct OverrideKey {
+    u64 key_combination;
+    bool override_by_default;
 };
 
-static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");
-
-/* For Debug Monitor extensions. */
-struct SmServiceRecord {
-    u64 service_name;
-    u64 owner_pid;
-    u64 max_sessions;
-    u64 mitm_pid;
-    u64 mitm_waiting_ack_pid;
-    bool is_light;
-    bool mitm_waiting_ack;
+class DmntConfigManager {
+    public:
+        static void RefreshConfiguration();
+    
+        static OverrideKey GetTitleCheatEnableKey(u64 tid);
+        static bool HasCheatEnableButton(u64 tid);
 };
-
-static_assert(sizeof(SmServiceRecord) == 0x30, "SmServiceRecord definition!");

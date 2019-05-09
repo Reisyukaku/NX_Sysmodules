@@ -1,5 +1,10 @@
+.vscode
+creport/0100000000000036
+
 **/*.elf
 **/*.kip
 **/*.nso
+**/*.nsp
+**/*.npdm
 **/build
 **/main

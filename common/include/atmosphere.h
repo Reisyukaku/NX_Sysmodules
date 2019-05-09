@@ -14,22 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#pragma once
-struct SmServiceName {
-    char name[sizeof(u64)];
-};
+#ifndef ATMOSPHERE_H
+#define ATMOSPHERE_H
 
-static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* For Debug Monitor extensions. */
-struct SmServiceRecord {
-    u64 service_name;
-    u64 owner_pid;
-    u64 max_sessions;
-    u64 mitm_pid;
-    u64 mitm_waiting_ack_pid;
-    bool is_light;
-    bool mitm_waiting_ack;
-};
+#include "atmosphere/version.h"
+#include "atmosphere/target_fw.h"
 
-static_assert(sizeof(SmServiceRecord) == 0x30, "SmServiceRecord definition!");
+#ifdef __cplusplus
+}
+#endif
+
+#endif

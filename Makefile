@@ -1,4 +1,4 @@
-KIPS := loader sm rnx_mitm pm fatal creport
+KIPS := loader sm rnx_mitm pm fatal creport dmnt
 
 ver_maj ?= 0
 ver_min ?= 0

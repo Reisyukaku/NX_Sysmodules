@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2019 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,6 @@
 enum ManagerServiceCmd {
     Manager_Cmd_RegisterProcess = 0,
     Manager_Cmd_UnregisterProcess = 1,
-    
     
     Manager_Cmd_AtmosphereEndInitDefers = 65000,
     Manager_Cmd_AtmosphereHasMitm = 65001,

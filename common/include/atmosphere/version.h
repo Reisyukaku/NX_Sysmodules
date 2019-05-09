@@ -14,22 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#pragma once
-struct SmServiceName {
-    char name[sizeof(u64)];
-};
+#ifndef ATMOSPHERE_VERSION_H
+#define ATMOSPHERE_VERSION_H
 
-static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");
+#define ATMOSPHERE_RELEASE_VERSION_MAJOR    0
+#define ATMOSPHERE_RELEASE_VERSION_MINOR    8
+#define ATMOSPHERE_RELEASE_VERSION_MICRO    9
 
-/* For Debug Monitor extensions. */
-struct SmServiceRecord {
-    u64 service_name;
-    u64 owner_pid;
-    u64 max_sessions;
-    u64 mitm_pid;
-    u64 mitm_waiting_ack_pid;
-    bool is_light;
-    bool mitm_waiting_ack;
-};
+#define ATMOSPHERE_SUPPORTED_HOS_VERSION_MAJOR 8
+#define ATMOSPHERE_SUPPORTED_HOS_VERSION_MINOR 0
+#define ATMOSPHERE_SUPPORTED_HOS_VERSION_MICRO 1
 
-static_assert(sizeof(SmServiceRecord) == 0x30, "SmServiceRecord definition!");
+#endif

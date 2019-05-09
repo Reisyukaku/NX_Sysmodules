@@ -14,24 +14,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
+#pragma once
 #include <switch.h>
 #include <stratosphere.hpp>
-#include "sm_manager_service.hpp"
-#include "sm_registration.hpp"
 
-Result ManagerService::RegisterProcess(u64 pid, InBuffer<u8> acid_sac, InBuffer<u8> aci0_sac) {
-    return Registration::RegisterProcess(pid, acid_sac.buffer, acid_sac.num_elements, aci0_sac.buffer, aci0_sac.num_elements);
-}
+struct MemoryRegionExtents {
+    u64 base;
+    u64 size;
+};
 
-Result ManagerService::UnregisterProcess(u64 pid) {
-    return Registration::UnregisterProcess(pid);
-}
+struct CheatProcessMetadata {
+    u64 process_id;
+    u64 title_id;
+    MemoryRegionExtents main_nso_extents;
+    MemoryRegionExtents heap_extents;
+    MemoryRegionExtents alias_extents;
+    MemoryRegionExtents address_space_extents;
+    u8 main_nso_build_id[0x20];
+};
 
-void ManagerService::AtmosphereEndInitDefers() {
-    Registration::EndInitDefers();
-}
+struct CheatDefinition {
+    char readable_name[0x40];
+    uint32_t num_opcodes;
+    uint32_t opcodes[0x100];
+};
 
-void ManagerService::AtmosphereHasMitm(Out<bool> out, SmServiceName service) {
-    out.SetValue(Registration::HasMitm(smEncodeName(service.name)));
-}
+struct CheatEntry {
+    bool enabled;
+    uint32_t cheat_id;
+    CheatDefinition definition;
+};
 
+struct FrozenAddressValue {
+    u64 value;
+    u8 width;
+};
+
+struct FrozenAddressEntry {
+    u64 address;
+    FrozenAddressValue value;
+};

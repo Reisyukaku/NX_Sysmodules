@@ -15,21 +15,9 @@
  */
  
 #pragma once
-struct SmServiceName {
-    char name[sizeof(u64)];
+#include <switch.h>
+
+class HidManagement {
+    public:
+        static Result GetKeysDown(u64 *keys);
 };
-
-static_assert(__alignof__(SmServiceName) == 1, "SmServiceName definition!");
-
-/* For Debug Monitor extensions. */
-struct SmServiceRecord {
-    u64 service_name;
-    u64 owner_pid;
-    u64 max_sessions;
-    u64 mitm_pid;
-    u64 mitm_waiting_ack_pid;
-    bool is_light;
-    bool mitm_waiting_ack;
-};
-
-static_assert(sizeof(SmServiceRecord) == 0x30, "SmServiceRecord definition!");

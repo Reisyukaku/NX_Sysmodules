@@ -20,7 +20,6 @@
 #include <malloc.h>
 
 #include <switch.h>
-#include <atmosphere.h>
 #include <stratosphere.hpp>
 
 #include "dmnt_service.hpp"
@@ -118,7 +117,7 @@ void __appInit(void) {
         fatalSimple(rc);
     }
 
-    CheckAtmosphereVersion(CURRENT_ATMOSPHERE_VERSION);
+    // CheckAtmosphereVersion(CURRENT_ATMOSPHERE_VERSION);
 }
 
 void __appExit(void) {
@@ -163,4 +162,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

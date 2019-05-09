@@ -414,7 +414,7 @@ bool DmntCheatManager::LoadCheats(u64 title_id, const u8 *build_id) {
     /* Open the file for title/build_id. */
     {
         char path[FS_MAX_PATH+1] = {0};
-        snprintf(path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/cheats/%02x%02x%02x%02x%02x%02x%02x%02x.txt", title_id,
+        snprintf(path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/cheats/%02x%02x%02x%02x%02x%02x%02x%02x.txt", title_id,
                 build_id[0], build_id[1], build_id[2], build_id[3], build_id[4], build_id[5], build_id[6], build_id[7]);
 
         f_cht = fopen(path, "rb");
@@ -521,7 +521,7 @@ bool DmntCheatManager::LoadCheatToggles(u64 title_id) {
     /* Open the file for title id. */
     {
         char path[FS_MAX_PATH+1] = {0};
-        snprintf(path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/cheats/toggles.txt", title_id);
+        snprintf(path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/cheats/toggles.txt", title_id);
 
         f_tg = fopen(path, "rb");
     }
@@ -563,7 +563,7 @@ void DmntCheatManager::SaveCheatToggles(u64 title_id) {
     /* Open the file for title id. */
     {
         char path[FS_MAX_PATH+1] = {0};
-        snprintf(path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/cheats/toggles.txt", title_id);
+        snprintf(path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/cheats/toggles.txt", title_id);
 
         f_tg = fopen(path, "wb");
     }

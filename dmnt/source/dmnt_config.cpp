@@ -113,7 +113,7 @@ static int DmntTitleSpecificIniHandler(void *user, const char *section, const ch
 }
 
 void DmntConfigManager::RefreshConfiguration() {
-    FILE *config = fopen("sdmc:/atmosphere/loader.ini", "r");
+    FILE *config = fopen("sdmc:/ReiNX/loader.ini", "r");
     if (config == NULL) {
         return;
     }
@@ -128,7 +128,7 @@ void DmntConfigManager::RefreshConfiguration() {
 OverrideKey DmntConfigManager::GetTitleCheatEnableKey(u64 tid) {
     OverrideKey cfg = g_default_cheat_enable_key;
     char path[FS_MAX_PATH+1] = {0};
-    snprintf(path, FS_MAX_PATH, "sdmc:/atmosphere/titles/%016lx/config.ini", tid); 
+    snprintf(path, FS_MAX_PATH, "sdmc:/ReiNX/titles/%016lx/config.ini", tid); 
     
     
     FILE *config = fopen(path, "r");

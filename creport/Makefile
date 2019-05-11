@@ -116,16 +116,11 @@ all: $(BUILD)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-	@rm 0100000000000036 -rf
-	@mkdir -p 0100000000000036
-	@mkdir -p 0100000000000036/exefs
-	@mv $(OUTPUT).npdm 0100000000000036/exefs/main.npdm
-	@mv $(OUTPUT).nso 0100000000000036/exefs/main
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).npdm $(TARGET).nso $(TARGET).elf 0100000000000036 -rf
+	@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).npdm $(TARGET).nso $(TARGET).elf
 
 
 #---------------------------------------------------------------------------------
@@ -137,8 +132,15 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
+all	:	$(OUTPUT).nsp
 
-$(OUTPUT).nso	:	$(OUTPUT).elf $(OUTPUT).npdm
+ifeq ($(strip $(APP_JSON)),)
+$(OUTPUT).nsp	:	$(OUTPUT).nso
+else
+$(OUTPUT).nsp	:	$(OUTPUT).nso $(OUTPUT).npdm
+endif
+
+$(OUTPUT).nso	:	$(OUTPUT).elf
 
 $(OUTPUT).elf	:	$(OFILES)
 

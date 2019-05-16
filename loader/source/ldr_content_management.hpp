@@ -35,10 +35,10 @@ class ContentManagement {
         static bool HasCreatedTitle(u64 tid);
         static void SetCreatedTitle(u64 tid);
         static void TryMountSdCard();
-        
-        static bool ShouldReplaceWithHBL(u64 tid);
-        static bool ShouldOverrideContents(u64 tid);
-        
+
+        static bool ShouldOverrideContentsWithSD(u64 tid);
+        static bool ShouldOverrideContentsWithHBL(u64 tid);
+
         static u64 HbOverrideTid;
 
         /* SetExternalContentSource extension */

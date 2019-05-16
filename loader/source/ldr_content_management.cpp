@@ -26,8 +26,6 @@
 #include "ldr_hid.hpp"
 #include "ldr_npdm.hpp"
 
-#include "ini.h"
-
 static FsFileSystem g_CodeFileSystem = {0};
 static FsFileSystem g_HblFileSystem = {0};
 
@@ -35,14 +33,13 @@ static std::vector<u64> g_created_titles;
 static bool g_has_initialized_fs_dev = false;
 
 /* Default to Key R, hold disables override, HBL at ReiNX/hbl.nsp. */
+static u64 g_override_key_combination = KEY_R;
 static bool g_mounted_hbl_nsp = false;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
-static bool g_override_by_default = true;
+static bool g_override_by_default = false;
+static bool g_override_any_app = true;
 
 u64 ContentManagement::HbOverrideTid = 0x010000000000100D;
-
-/* Static buffer for loader.ini contents at runtime. */
-static char g_config_ini_data[0x800];
 
 /* SetExternalContentSource extension */
 static std::map<u64, ContentManagement::ExternalContentSource> g_external_content_sources;
@@ -56,7 +53,7 @@ Result ContentManagement::MountCode(u64 tid, FsStorageId sid) {
         TryMountSdCard();
     }
     
-    if (ShouldOverrideContents(tid) && R_SUCCEEDED(MountCodeNspOnSd(tid))) {
+    if (ShouldOverrideContentsWithSD(tid) && R_SUCCEEDED(MountCodeNspOnSd(tid))) {
         return 0x0;
     }
         
@@ -221,12 +218,34 @@ void ContentManagement::TryMountSdCard() {
     }
 }
 
-bool ContentManagement::ShouldReplaceWithHBL(u64 tid) {
-    return g_mounted_hbl_nsp && tid == HbOverrideTid;
+static bool IsHBLTitleId(u64 tid) {
+    return ((g_override_any_app) || (!g_override_any_app && tid == ContentManagement::HbOverrideTid));
 }
 
-bool ContentManagement::ShouldOverrideContents(u64 tid) {
-    return g_has_initialized_fs_dev;
+static bool ShouldOverrideContents() {
+    u64 kDown = 0;
+    bool keys_triggered = (R_SUCCEEDED(HidManagement::GetKeysDown(&kDown)) && ((kDown & g_override_key_combination) != 0));
+    return g_has_initialized_fs_dev && (g_override_by_default ^ keys_triggered);
+}
+
+bool ContentManagement::ShouldOverrideContentsWithHBL(u64 tid) {
+    if (g_mounted_hbl_nsp && tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
+        return IsHBLTitleId(tid) && ShouldOverrideContents();
+    } else {
+        return false;
+    }
+}
+
+bool ContentManagement::ShouldOverrideContentsWithSD(u64 tid) {
+    if (g_has_initialized_fs_dev) {
+        if (tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
+            return ShouldOverrideContents();
+        } else {
+            return true;
+        }
+    } else {
+        return false;
+    }
 }
 
 /* SetExternalContentSource extension */

@@ -30,7 +30,6 @@ static NsoUtils::NsoHeader g_nso_headers[NSO_NUM_MAX] = {0};
 static bool g_nso_present[NSO_NUM_MAX] = {0};
 
 static char g_nso_path[FS_MAX_PATH] = {0};
-static bool hidOverride = false;
 
 FILE *NsoUtils::OpenNsoFromECS(unsigned int index, ContentManagement::ExternalContentSource *ecs) {
     std::fill(g_nso_path, g_nso_path + FS_MAX_PATH, 0);
@@ -73,21 +72,12 @@ FILE *NsoUtils::OpenNso(unsigned int index, u64 title_id) {
         return OpenNsoFromECS(index, ecs);
     }
 
-    if (ContentManagement::ShouldOverrideContents(title_id)) {
-        if (ContentManagement::ShouldReplaceWithHBL(title_id)) {
-            return OpenNsoFromHBL(index);
-        }
-        
-        u64 kDown = 0;
-        if (hidOverride){
-            hidInitialize();
-            hidScanInput();
-            kDown = hidKeysDown(CONTROLLER_P1_AUTO);
-            hidExit();
-        }
-        if (title_id == 0x0100000000001000) 
-            hidOverride = true;
-        FILE *f_out = !(kDown & KEY_R) ? OpenNsoFromSdCard(index, title_id) : NULL;
+    if (ContentManagement::ShouldOverrideContentsWithHBL(title_id)) {
+        return OpenNsoFromHBL(index);
+    }
+
+    if (ContentManagement::ShouldOverrideContentsWithSD(title_id)) {
+        FILE *f_out = OpenNsoFromSdCard(index, title_id);
         if (f_out != NULL) {
             return f_out;
         } else if (CheckNsoStubbed(index, title_id)) {

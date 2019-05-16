@@ -24,7 +24,6 @@
 static NpdmUtils::NpdmCache g_npdm_cache = {0};
 static NpdmUtils::NpdmCache g_original_npdm_cache = {0};
 static char g_npdm_path[FS_MAX_PATH] = {0};
-static bool hidOverride = false;
 
 Result NpdmUtils::LoadNpdmFromCache(u64 tid, NpdmInfo *out) {
     if (g_npdm_cache.info.title_id != tid) {
@@ -65,21 +64,12 @@ FILE *NpdmUtils::OpenNpdm(u64 title_id) {
         return OpenNpdmFromECS(ecs);
     }
 
-    if (ContentManagement::ShouldOverrideContents(title_id)) {
-        if (ContentManagement::ShouldReplaceWithHBL(title_id)) {
-            return OpenNpdmFromHBL();
-        }
-        
-        u64 kDown = 0;
-        if (hidOverride){
-            hidInitialize();
-            hidScanInput();
-            kDown = hidKeysDown(CONTROLLER_P1_AUTO);
-            hidExit();
-        }
-        if (title_id == 0x0100000000001000) 
-            hidOverride = true;
-        FILE *f_out = !(kDown & KEY_R) ? OpenNpdmFromSdCard(title_id) : NULL;
+    if (ContentManagement::ShouldOverrideContentsWithHBL(title_id)) {
+        return OpenNpdmFromHBL();
+    }
+
+    if (ContentManagement::ShouldOverrideContentsWithSD(title_id)) {
+        FILE *f_out = OpenNpdmFromSdCard(title_id);
         if (f_out != NULL) {
             return f_out;
         }
@@ -200,8 +190,7 @@ Result NpdmUtils::LoadNpdm(u64 tid, NpdmInfo *out) {
     info->acid->title_id_range_max = tid;
     info->aci0->title_id = tid;
     
-    if (ContentManagement::ShouldOverrideContents(tid) && ContentManagement::ShouldReplaceWithHBL(tid) 
-        && R_SUCCEEDED(LoadNpdmInternal(OpenNpdmFromExeFS(), &g_original_npdm_cache))) {
+    if (ContentManagement::ShouldOverrideContentsWithHBL(tid) && R_SUCCEEDED(LoadNpdmInternal(OpenNpdmFromExeFS(), &g_original_npdm_cache))) {
         NpdmInfo *original_info = &g_original_npdm_cache.info;
         /* Fix pool partition. */
         if (kernelAbove500()) {

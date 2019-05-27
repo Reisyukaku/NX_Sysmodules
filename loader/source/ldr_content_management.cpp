@@ -33,10 +33,10 @@ static std::vector<u64> g_created_titles;
 static bool g_has_initialized_fs_dev = false;
 
 /* Default to Key R, hold disables override, HBL at ReiNX/hbl.nsp. */
-static u64 g_override_key_combination = KEY_R;
+static u64 g_override_key_combination;
 static bool g_mounted_hbl_nsp = false;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
-static bool g_override_by_default = false;
+static bool g_override_by_default;
 static bool g_override_any_app = true;
 
 u64 ContentManagement::HbOverrideTid = 0x010000000000100D;
@@ -229,6 +229,8 @@ static bool ShouldOverrideContents() {
 }
 
 bool ContentManagement::ShouldOverrideContentsWithHBL(u64 tid) {
+    g_override_key_combination = KEY_R;
+    g_override_by_default = false;
     if (g_mounted_hbl_nsp && tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
         return IsHBLTitleId(tid) && ShouldOverrideContents();
     } else {
@@ -237,7 +239,9 @@ bool ContentManagement::ShouldOverrideContentsWithHBL(u64 tid) {
 }
 
 bool ContentManagement::ShouldOverrideContentsWithSD(u64 tid) {
-    if (g_has_initialized_fs_dev) {
+    if (g_has_initialized_fs_dev && tid != HbOverrideTid) {
+        g_override_key_combination = KEY_L;
+        g_override_by_default = true;
         if (tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
             return ShouldOverrideContents();
         } else {

@@ -25,15 +25,15 @@ Result AdjustClockTask::AdjustClock() {
     constexpr u32 EMC_CLOCK_1331MHZ = 0x4F588000L;
     Result rc = 0;
     
-    if (R_FAILED((rc = pcvSetClockRate(PcvModule_CpuBus, CPU_CLOCK_1020MHZ)))) {
+    if (R_FAILED((rc = pcvSetClockRate(PcvModule_Cpu, CPU_CLOCK_1020MHZ)))) {
         return rc;
     }
     
-    if (R_FAILED((rc = pcvSetClockRate(PcvModule_GPU, GPU_CLOCK_307MHZ)))) {
+    if (R_FAILED((rc = pcvSetClockRate(PcvModule_Gpu, GPU_CLOCK_307MHZ)))) {
         return rc;
     }
     
-    if (R_FAILED((rc = pcvSetClockRate(PcvModule_EMC, EMC_CLOCK_1331MHZ)))) {
+    if (R_FAILED((rc = pcvSetClockRate(PcvModule_Emc, EMC_CLOCK_1331MHZ)))) {
         return rc;
     }
     

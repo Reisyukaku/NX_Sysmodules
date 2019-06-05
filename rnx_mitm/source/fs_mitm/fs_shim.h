@@ -11,11 +11,6 @@
 extern "C" {
 #endif
 
-/* TODO: Reverse this more. */
-typedef struct {
-    u32 flags[0x40/sizeof(u32)];
-} FsRangeInfo;
-
 /* Missing fsp-srv commands. */
 Result fsOpenBisStorageFwd(Service* s, FsStorage* out, u32 PartitionId);
 Result fsOpenDataStorageByCurrentProcessFwd(Service* s, FsStorage* out);

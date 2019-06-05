@@ -322,7 +322,7 @@ Result Utils::SaveSdFileForAtmosphere(u64 title_id, const char *fn, void *data, 
     }
     
     /* Try to write the data. */
-    rc = fsFileWrite(&f, 0, data, size);
+    rc = fsFileWrite(&f, 0, data, size, FS_WRITEOPTION_NONE);
     
     return rc;
 }
@@ -554,7 +554,7 @@ OverrideKey Utils::GetTitleOverrideKey(u64 tid) {
             ON_SCOPE_EXIT { free(config_buf); };
             
             /* Read title ini contents. */
-            fsFileRead(&cfg_file, 0, config_buf, config_file_size, &config_file_size);
+            fsFileRead(&cfg_file, 0, config_buf, config_file_size, FS_READOPTION_NONE, &config_file_size);
             
             /* Parse title ini. */
             ini_parse_string(config_buf, FsMitmTitleSpecificIniHandler, &cfg);
@@ -580,7 +580,7 @@ void Utils::RefreshConfiguration() {
     /* Read in string. */
     std::fill(g_config_ini_data, g_config_ini_data + 0x800, 0);
     size_t r_s;
-    fsFileRead(&config_file, 0, g_config_ini_data, size, &r_s);
+    fsFileRead(&config_file, 0, g_config_ini_data, size, FS_READOPTION_NONE, &r_s);
     fsFileClose(&config_file);
     
     ini_parse_string(g_config_ini_data, FsMitmIniHandler, NULL);

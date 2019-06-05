@@ -39,5 +39,5 @@ class LayeredRomFS : public IROStorage {
         
         virtual Result Read(void *buffer, size_t size, u64 offset) override;
         virtual Result GetSize(u64 *out_size) override;
-        virtual Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override;
+        virtual Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override;
 };

@@ -54,7 +54,7 @@ class DirectorySaveDataFile : public IFile {
         virtual Result SetSizeImpl(u64 size) override {
             return this->base_file->SetSize(size);
         }
-        virtual Result OperateRangeImpl(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
+        virtual Result OperateRangeImpl(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
             return this->base_file->OperateRange(operation_type, offset, size, out_range_info);
         }
 };

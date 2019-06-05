@@ -39,7 +39,7 @@ class IStorage {
         virtual Result Flush() = 0;
         virtual Result SetSize(u64 size) = 0;
         virtual Result GetSize(u64 *out_size) = 0;
-        virtual Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
+        virtual Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
 
         static inline bool IsRangeValid(uint64_t offset, uint64_t size, uint64_t total_size) {
             return size <= total_size && offset <= total_size - size;
@@ -75,7 +75,7 @@ class IStorageInterface : public IServiceObject {
         virtual Result GetSize(Out<u64> size) final {
             return this->base_storage->GetSize(size.GetPointer());
         };
-        virtual Result OperateRange(Out<FsRangeInfo> range_info, u32 operation_type, u64 offset, u64 size) final {
+        virtual Result OperateRange(Out<FsRangeInfo> range_info, FsOperationId operation_type, u64 offset, u64 size) final {
             return this->base_storage->OperateRange(operation_type, offset, size, range_info.GetPointer());
         };
     public:
@@ -109,7 +109,7 @@ class IROStorage : public IStorage {
             return ResultFsUnsupportedOperation;
         };
         virtual Result GetSize(u64 *out_size) = 0;
-        virtual Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
+        virtual Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
 };
 
 
@@ -143,7 +143,7 @@ class ProxyStorage : public IStorage {
         virtual Result SetSize(u64 size) override {
             return fsStorageSetSize(this->base_storage, size);
         };
-        virtual Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
+        virtual Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
             return fsStorageOperateRange(this->base_storage, operation_type, offset, size, out_range_info);
         };
 };
@@ -169,7 +169,7 @@ class ROProxyStorage : public IROStorage {
         virtual Result GetSize(u64 *out_size) override {
             return fsStorageGetSize(this->base_storage, out_size);
         };
-        virtual Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
+        virtual Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
             return fsStorageOperateRange(this->base_storage, operation_type, offset, size, out_range_info);
         };
 };

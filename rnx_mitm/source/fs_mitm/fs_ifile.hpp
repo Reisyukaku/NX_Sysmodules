@@ -88,7 +88,7 @@ class IFile {
             return SetSizeImpl(size);
         }
 
-        Result OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) {
+        Result OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) {
             if (operation_type == 3) {
                 return OperateRangeImpl(operation_type, offset, size, out_range_info);
             }
@@ -103,7 +103,7 @@ class IFile {
         virtual Result FlushImpl() = 0;
         virtual Result WriteImpl(u64 offset, void *buffer, u64 size, bool flush) = 0;
         virtual Result SetSizeImpl(u64 size) = 0;
-        virtual Result OperateRangeImpl(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
+        virtual Result OperateRangeImpl(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) = 0;
 };
 
 class IFileInterface : public IServiceObject {
@@ -134,7 +134,7 @@ class IFileInterface : public IServiceObject {
         virtual Result GetSize(Out<u64> size) final {
             return this->base_file->GetSize(size.GetPointer());
         };
-        virtual Result OperateRange(Out<FsRangeInfo> range_info, u32 operation_type, u64 offset, u64 size) final {
+        virtual Result OperateRange(Out<FsRangeInfo> range_info, FsOperationId operation_type, u64 offset, u64 size) final {
             return this->base_file->OperateRange(operation_type, offset, size, range_info.GetPointer());
         };
     public:
@@ -174,7 +174,7 @@ class ProxyFile : public IFile {
         virtual Result ReadImpl(u64 *out, u64 offset, void *buffer, u64 size) override {
             size_t out_sz;
 
-            Result rc = fsFileRead(this->base_file.get(), offset, buffer, size, &out_sz);
+            Result rc = fsFileRead(this->base_file.get(), offset, buffer, size, FS_READOPTION_NONE, &out_sz);
             if (R_SUCCEEDED(rc)) {
                 *out = out_sz;
             }
@@ -188,7 +188,7 @@ class ProxyFile : public IFile {
             return fsFileFlush(this->base_file.get());
         }
         virtual Result WriteImpl(u64 offset, void *buffer, u64 size, bool flush) override {
-            Result rc = fsFileWrite(this->base_file.get(), offset, buffer, size);
+            Result rc = fsFileWrite(this->base_file.get(), offset, buffer, size, FS_WRITEOPTION_NONE);
             if (R_SUCCEEDED(rc)) {
                 /* libnx doesn't allow passing the flush flag. */
                 rc = fsFileFlush(this->base_file.get());
@@ -198,7 +198,7 @@ class ProxyFile : public IFile {
         virtual Result SetSizeImpl(u64 size) override {
             return fsFileSetSize(this->base_file.get(), size);
         }
-        virtual Result OperateRangeImpl(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
+        virtual Result OperateRangeImpl(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) override {
             return fsFileOperateRange(this->base_file.get(), operation_type, offset, size, out_range_info);
         }
 };

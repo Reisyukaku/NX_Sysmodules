@@ -95,7 +95,7 @@ Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
                             fatalSimple(rc);
                         }
                         size_t out_read;
-                        if (R_FAILED((rc = fsFileRead(&file, (offset - cur_source->virtual_offset), (void *)((uintptr_t)buffer + read_so_far), cur_read_size, &out_read)))) {
+                        if (R_FAILED((rc = fsFileRead(&file, (offset - cur_source->virtual_offset), (void *)((uintptr_t)buffer + read_so_far), cur_read_size,FS_READOPTION_NONE, &out_read)))) {
                             fatalSimple(rc);
                         }
                         if (out_read != cur_read_size) {
@@ -111,7 +111,7 @@ Result LayeredRomFS::Read(void *buffer, size_t size, u64 offset)  {
                             fatalSimple(rc);
                         }
                         size_t out_read;
-                        if (R_FAILED((rc = fsFileRead(&file, (offset - cur_source->virtual_offset), (void *)((uintptr_t)buffer + read_so_far), cur_read_size, &out_read)))) {
+                        if (R_FAILED((rc = fsFileRead(&file, (offset - cur_source->virtual_offset), (void *)((uintptr_t)buffer + read_so_far), cur_read_size, FS_READOPTION_NONE, &out_read)))) {
                             fatalSimple(rc);
                         }
                         if (out_read != cur_read_size) {
@@ -164,7 +164,7 @@ Result LayeredRomFS::GetSize(u64 *out_size)  {
     *out_size = (*this->p_source_infos)[this->p_source_infos->size() - 1].virtual_offset + (*this->p_source_infos)[this->p_source_infos->size() - 1].size;
     return ResultSuccess;
 }
-Result LayeredRomFS::OperateRange(u32 operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) {
+Result LayeredRomFS::OperateRange(FsOperationId operation_type, u64 offset, u64 size, FsRangeInfo *out_range_info) {
     /* TODO: How should I implement this for a virtual romfs? */
     if (operation_type == 3) {
         *out_range_info = {0};

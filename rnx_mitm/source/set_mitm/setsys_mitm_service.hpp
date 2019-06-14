@@ -29,6 +29,7 @@ enum SetSysCmd : u32 {
     /* Commands for which set:sys *must* act as a passthrough. */
     /* TODO: Solve the relevant IPC detection problem. */
     SetSysCmd_GetEdid = 41,
+    SetSysCmd_GetQuestFlag = 47,
 };
 
 class SetSysMitmService : public IMitmServiceObject {      
@@ -50,7 +51,7 @@ class SetSysMitmService : public IMitmServiceObject {
         Result GetFirmwareVersion2(OutPointerWithServerSize<SetSysFirmwareVersion, 0x1> out);
         Result GetSettingsItemValueSize(Out<u64> out_size, InPointer<char> name, InPointer<char> key);
         Result GetSettingsItemValue(Out<u64> out_size, OutBuffer<u8> out_value, InPointer<char> name, InPointer<char> key);
-        
+        Result GetQuestFlag(Out<bool> isQuest);
         /* Forced passthrough commands. */
         Result GetEdid(OutPointerWithServerSize<SetSysEdid, 0x1> out);
     public:
@@ -61,5 +62,6 @@ class SetSysMitmService : public IMitmServiceObject {
             MakeServiceCommandMeta<SetSysCmd_GetSettingsItemValue, &SetSysMitmService::GetSettingsItemValue>(),
             
             MakeServiceCommandMeta<SetSysCmd_GetEdid, &SetSysMitmService::GetEdid>(),
+            MakeServiceCommandMeta<SetSysCmd_GetQuestFlag, &SetSysMitmService::GetQuestFlag>(),
         };
 };

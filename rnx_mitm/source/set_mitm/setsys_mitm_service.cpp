@@ -41,6 +41,11 @@ Result SetSysMitmService::GetFirmwareVersion2(OutPointerWithServerSize<SetSysFir
     return VersionManager::GetFirmwareVersion(this->title_id, out.pointer);
 }
 
+Result SetSysMitmService::GetQuestFlag(Out<bool> isQuest) {
+    isQuest.SetValue(false);
+    return 0;
+}
+
 Result SetSysMitmService::GetSettingsItemValueSize(Out<u64> out_size, InPointer<char> in_name, InPointer<char> in_key) {
     char name[SET_MAX_NAME_SIZE] = {0};
     char key[SET_MAX_NAME_SIZE] = {0};

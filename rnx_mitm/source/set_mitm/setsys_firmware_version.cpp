@@ -21,8 +21,8 @@
 
 static HosMutex g_version_mutex;
 static bool g_got_version = false;
-static SetSysFirmwareVersion g_ams_fw_version = {0};
-static SetSysFirmwareVersion g_fw_version = {0};
+static SetSysFirmwareVersion g_ams_fw_version = {2};
+static SetSysFirmwareVersion g_fw_version = {4};
 
 void VersionManager::Initialize() {
     std::scoped_lock<HosMutex> lock(g_version_mutex);

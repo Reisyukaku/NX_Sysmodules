@@ -15,6 +15,7 @@
  */
  
 #include <switch.h>
+#include <stratosphere.hpp>
 #include <algorithm>
 
 #include "ldr_process_creation.hpp"
@@ -23,6 +24,35 @@
 #include "ldr_content_management.hpp"
 #include "ldr_npdm.hpp"
 #include "ldr_nso.hpp"
+
+static inline bool IsDisallowedVersion810(const u64 title_id, const u32 version) {
+    return version == 0 &&
+    (title_id == TitleId_Settings ||
+     title_id == TitleId_Bus ||
+     title_id == TitleId_Audio ||
+     title_id == TitleId_NvServices ||
+     title_id == TitleId_Ns ||
+     title_id == TitleId_Ssl ||
+     title_id == TitleId_Es ||
+     title_id == TitleId_Creport ||
+     title_id == TitleId_Ro);
+}
+
+Result ProcessCreation::ValidateProcessVersion(u64 title_id, u32 version) {
+    if (GetRuntimeFirmwareVersion() < FirmwareVersion_810) {
+        return ResultSuccess;
+    } else {
+#ifdef LDR_VALIDATE_PROCESS_VERSION
+        if (IsDisallowedVersion810(title_id, version)) {
+            return ResultLoaderInvalidVersion;
+        } else {
+            return ResultSuccess;
+        }
+#else
+        return ResultSuccess;
+#endif
+    }
+}
 
 Result ProcessCreation::InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle reslimit_h, u64 arg_flags, ProcessInfo *out_proc_info) {
     /* Initialize a ProcessInfo using an npdm. */
@@ -35,8 +65,8 @@ Result ProcessCreation::InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle 
     /* Set title id. */
     out_proc_info->title_id = npdm->aci0->title_id;
     
-    /* Set process category. */
-    out_proc_info->process_category = npdm->header->process_category;
+    /* Set version */
+    out_proc_info->version = npdm->header->version;
     
     /* Copy reslimit handle raw. */
     out_proc_info->reslimit_h = reslimit_h;
@@ -137,6 +167,11 @@ Result ProcessCreation::CreateProcess(Handle *out_process_h, u64 index, char *nc
         goto CREATE_PROCESS_END;
     }
     
+    rc = ValidateProcessVersion(target_process->tid_sid.title_id, npdm_info.header->version);
+    if (R_FAILED(rc)) {
+        goto CREATE_PROCESS_END;
+    }
+
     /* Validate the title we're loading is what we expect. */
     if (npdm_info.aci0->title_id < npdm_info.acid->title_id_range_min || npdm_info.aci0->title_id > npdm_info.acid->title_id_range_max) {
         rc = 0x1209;

@@ -111,16 +111,17 @@ void ContentManagement::TryMountHblNspOnSd() {
 
 Result ContentManagement::MountCodeNspOnSd(u64 tid) {
     char path[FS_MAX_PATH+1] = {0};
+    
+    if(tid == HbOverrideTid) {
+        TryMountHblNspOnSd();
+        return 0;
+    }
+    
     snprintf(path, FS_MAX_PATH, "@Sdcard:/ReiNX/titles/%016lx/exefs.nsp", tid); 
     Result rc = fsOpenFileSystemWithId(&g_CodeFileSystem, 0, FsFileSystemType_ApplicationPackage, path);
     
     if (R_SUCCEEDED(rc)) {
         fsdevMountDevice("code", g_CodeFileSystem);
-    }
-    
-    if(tid == HbOverrideTid) {
-        TryMountHblNspOnSd();
-        rc = 0;
     }
     
     return rc;

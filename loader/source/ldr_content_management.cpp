@@ -36,8 +36,8 @@ static bool g_has_initialized_fs_dev = false;
 static u64 g_override_key_combination;
 static bool g_mounted_hbl_nsp = false;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
-static bool g_override_by_default;
-static bool g_override_any_app = true;
+static bool g_override_by_default = true;
+static bool g_override_any_app = false;
 
 u64 ContentManagement::HbOverrideTid = 0x010000000000100D;
 

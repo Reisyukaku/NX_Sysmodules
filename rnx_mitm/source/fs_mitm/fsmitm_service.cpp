@@ -174,7 +174,7 @@ Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInte
     
 
     /* For now, until we're sure this is robust, only intercept normal savedata. */
-    if (!should_redirect_saves || save_struct.SaveDataType != FsSaveDataType_SaveData) {
+    if (!should_redirect_saves || save_struct.saveDataType != FsSaveDataType_SaveData) {
         return ResultAtmosphereMitmShouldForwardToSession;
     }
 
@@ -210,7 +210,7 @@ Result FsMitmService::OpenSaveDataFileSystem(Out<std::shared_ptr<IFileSystemInte
         /* Verify that we can open the save directory, and that it exists. */
         const u64 target_tid = save_struct.titleID == 0 ? this->title_id : save_struct.titleID;
         FsPath save_dir_path;
-        if (R_FAILED((rc = FsSaveUtils::GetSaveDataDirectoryPath(save_dir_path, space_id, save_struct.SaveDataType, target_tid, save_struct.userID, save_struct.saveID)))) {
+        if (R_FAILED((rc = FsSaveUtils::GetSaveDataDirectoryPath(save_dir_path, space_id, save_struct.saveDataType, target_tid, save_struct.userID, save_struct.saveID)))) {
             return rc;
         }
 

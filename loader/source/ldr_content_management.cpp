@@ -31,13 +31,8 @@ static FsFileSystem g_HblFileSystem = {0};
 
 static std::vector<u64> g_created_titles;
 static bool g_has_initialized_fs_dev = false;
-
-/* Default to Key R, hold disables override, HBL at ReiNX/hbl.nsp. */
-static u64 g_override_key_combination;
 static bool g_mounted_hbl_nsp = false;
 static char g_hbl_sd_path[FS_MAX_PATH+1] = "@Sdcard:/ReiNX/hbl.nsp\x00";
-static bool g_override_by_default;
-static bool g_override_any_app = true;
 
 u64 ContentManagement::HbOverrideTid = 0x010000000000100D;
 
@@ -219,38 +214,15 @@ void ContentManagement::TryMountSdCard() {
     }
 }
 
-static bool IsHBLTitleId(u64 tid) {
-    return ((g_override_any_app) || (!g_override_any_app && tid == ContentManagement::HbOverrideTid));
-}
-
-static bool ShouldOverrideContents() {
-    u64 kDown = 0;
-    bool keys_triggered = (R_SUCCEEDED(HidManagement::GetKeysDown(&kDown)) && ((kDown & g_override_key_combination) != 0));
-    return g_has_initialized_fs_dev && (g_override_by_default ^ keys_triggered);
-}
-
 bool ContentManagement::ShouldOverrideContentsWithHBL(u64 tid) {
-    g_override_key_combination = KEY_R;
-    g_override_by_default = false;
-    if (g_mounted_hbl_nsp && tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
-        return IsHBLTitleId(tid) && ShouldOverrideContents();
-    } else {
-        return false;
-    }
+    return (g_mounted_hbl_nsp && tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000) && tid == HbOverrideTid);
 }
 
 bool ContentManagement::ShouldOverrideContentsWithSD(u64 tid) {
     if (g_has_initialized_fs_dev && tid != HbOverrideTid) {
-        g_override_key_combination = KEY_L;
-        g_override_by_default = true;
-        if (tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) {
-            return ShouldOverrideContents();
-        } else {
-            return true;
-        }
-    } else {
-        return false;
+        if (tid >= 0x0100000000001000 && HasCreatedTitle(0x0100000000001000)) return true;
     }
+    else return false;
 }
 
 /* SetExternalContentSource extension */

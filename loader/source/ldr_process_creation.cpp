@@ -25,35 +25,6 @@
 #include "ldr_npdm.hpp"
 #include "ldr_nso.hpp"
 
-static inline bool IsDisallowedVersion810(const u64 title_id, const u32 version) {
-    return version == 0 &&
-    (title_id == TitleId_Settings ||
-     title_id == TitleId_Bus ||
-     title_id == TitleId_Audio ||
-     title_id == TitleId_NvServices ||
-     title_id == TitleId_Ns ||
-     title_id == TitleId_Ssl ||
-     title_id == TitleId_Es ||
-     title_id == TitleId_Creport ||
-     title_id == TitleId_Ro);
-}
-
-Result ProcessCreation::ValidateProcessVersion(u64 title_id, u32 version) {
-    if (GetRuntimeFirmwareVersion() < FirmwareVersion_810) {
-        return ResultSuccess;
-    } else {
-#ifdef LDR_VALIDATE_PROCESS_VERSION
-        if (IsDisallowedVersion810(title_id, version)) {
-            return ResultLoaderInvalidVersion;
-        } else {
-            return ResultSuccess;
-        }
-#else
-        return ResultSuccess;
-#endif
-    }
-}
-
 Result ProcessCreation::InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle reslimit_h, u64 arg_flags, ProcessInfo *out_proc_info) {
     /* Initialize a ProcessInfo using an npdm. */
     *out_proc_info = (const ProcessCreation::ProcessInfo){0};
@@ -163,11 +134,6 @@ Result ProcessCreation::CreateProcess(Handle *out_process_h, u64 index, char *nc
     
     /* Load the process's NPDM. */
     rc = NpdmUtils::LoadNpdmFromCache(target_process->tid_sid.title_id, &npdm_info);
-    if (R_FAILED(rc)) {
-        goto CREATE_PROCESS_END;
-    }
-    
-    rc = ValidateProcessVersion(target_process->tid_sid.title_id, npdm_info.header->version);
     if (R_FAILED(rc)) {
         goto CREATE_PROCESS_END;
     }

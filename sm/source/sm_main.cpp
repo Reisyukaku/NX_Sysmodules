@@ -80,7 +80,6 @@ void __appExit(void) {
 
 int main(int argc, char **argv)
 {
-    consoleDebugInit(debugDevice_SVC);
     
     /* TODO: What's a good timeout value to use here? */
     auto server_manager = new WaitableManager(1);

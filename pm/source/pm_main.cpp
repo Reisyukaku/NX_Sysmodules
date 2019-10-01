@@ -144,7 +144,6 @@ void __appExit(void) {
 int main(int argc, char **argv)
 {
     HosThread process_track_thread;
-    consoleDebugInit(debugDevice_SVC);
 
     /* Initialize and spawn the Process Tracking thread. */
     Registration::InitializeSystemResources();

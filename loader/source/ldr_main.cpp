@@ -103,7 +103,6 @@ struct LoaderServerOptions {
 
 int main(int argc, char **argv)
 {
-    consoleDebugInit(debugDevice_SVC);
     
     auto server_manager = new WaitableManager<LoaderServerOptions>(1);
     

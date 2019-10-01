@@ -74,7 +74,7 @@ void Utils::InitializeThreadFunc(void *args) {
     /* Get required services. */
     DoWithSmSession([&]() {
         Handle tmp_hnd = 0;
-        static const char * const required_active_services[] = {"pcv", "gpio", "pinmux", "psc:c"};
+        static const char * const required_active_services[] = {"pcv", "gpio", "pinmux", "psc:m"};
         for (unsigned int i = 0; i < sizeof(required_active_services) / sizeof(required_active_services[0]); i++) {
             if (R_FAILED(smGetServiceOriginal(&tmp_hnd, smEncodeName(required_active_services[i])))) {
                 /* TODO: Panic */

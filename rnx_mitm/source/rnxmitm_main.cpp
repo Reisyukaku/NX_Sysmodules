@@ -71,7 +71,6 @@ void __appExit(void) {
 
 int main(int argc, char **argv)
 {
-    consoleDebugInit(debugDevice_SVC);
     HosThread initializer_thread;
     
     LaunchAllMitmModules();

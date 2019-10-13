@@ -136,7 +136,6 @@ void __appExit(void) {
 
 int main(int argc, char **argv)
 {
-    consoleDebugInit(debugDevice_SVC);
 
     /* Initialize configuration manager. */
     DmntConfigManager::RefreshConfiguration();

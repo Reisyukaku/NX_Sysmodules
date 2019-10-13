@@ -134,7 +134,7 @@ Result ProcessManagerService::PopulateProgramInfoBuffer(ProcessManagerService::P
     
     size_t offset = 0;
     rc = 0x19009;
-    if (offset + info.acid->sac_size < sizeof(out->ac_buffer)) {
+    if (offset + info.acid->sac_size <= sizeof(out->ac_buffer)) {
         out->acid_sac_size = info.acid->sac_size;
         std::memcpy(out->ac_buffer + offset, info.acid_sac, out->acid_sac_size);
         offset += out->acid_sac_size;

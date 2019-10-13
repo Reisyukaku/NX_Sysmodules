@@ -38,7 +38,6 @@ bool Boot0Storage::CanModifyBctPubks() {
 
 Result Boot0Storage::Read(void *_buffer, size_t size, u64 offset) {
     std::scoped_lock<HosMutex> lk{g_boot0_mutex};
-            
     return Base::Read(_buffer, size, offset);
 }
 

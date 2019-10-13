@@ -133,6 +133,7 @@ static bool IsMaintenanceMode() {
 }
 
 static const std::tuple<u64, bool> g_additional_launch_programs[] = {
+    {TitleId_Tma, true},         /* tma */
     {TitleId_Am, true},          /* am */
     {TitleId_NvServices, true},  /* nvservices */
     {TitleId_NvnFlinger, true},  /* nvnflinger */
@@ -172,12 +173,13 @@ static const std::tuple<u64, bool> g_additional_launch_programs[] = {
     {TitleId_Migration, true},   /* migration */
     {TitleId_Grc, true},         /* grc */
     {TitleId_Olsc, true},        /* olsc */
+    {TitleId_Ngct, true},        /* ngct */
 };
 
 static void MountSdCard() {
     DoWithSmSession([&]() {
         Handle tmp_hnd = 0;
-        static const char * const required_active_services[] = {"pcv", "gpio", "pinmux", "psc:c"};
+        static const char * const required_active_services[] = {"pcv", "gpio", "pinmux", "psc:m"};
         for (unsigned int i = 0; i < sizeof(required_active_services) / sizeof(required_active_services[0]); i++) {
             if (R_FAILED(smGetServiceOriginal(&tmp_hnd, smEncodeName(required_active_services[i])))) {
                 /* TODO: Panic */
@@ -228,7 +230,9 @@ void EmbeddedBoot2::Main() {
     LaunchTitle(TitleId_Settings, FsStorageId_NandSystem, 0, NULL);
     /* Launch pcv. */
     LaunchTitle(TitleId_Pcv, FsStorageId_NandSystem, 0, NULL);
-
+    /* Launch usb. */
+    LaunchTitle(TitleId_Usb, FsStorageId_NandSystem, 0, NULL);
+    
     /* At this point, the SD card can be mounted. */
     MountSdCard();
 
@@ -246,12 +250,6 @@ void EmbeddedBoot2::Main() {
         WaitForMitm("bpc:c");
     }
 
-    /* Launch usb. */
-    LaunchTitle(TitleId_Usb, FsStorageId_NandSystem, 0, NULL);
-
-    /* Launch tma. */
-    LaunchTitle(TitleId_Tma, FsStorageId_NandSystem, 0, NULL);
-
     /* Launch Atmosphere dmnt, using FsStorageId_None to force SD card boot. */
     // LaunchTitle(TitleId_Dmnt, FsStorageId_None, 0, NULL);
 
@@ -266,7 +264,7 @@ void EmbeddedBoot2::Main() {
             LaunchTitle(TitleId_Npns, FsStorageId_NandSystem, 0, NULL);
         }
     }
-
+    
     /* Allow for user-customizable programs. */
     DIR *titles_dir = opendir("sdmc:/ReiNX/titles");
     struct dirent *ent;

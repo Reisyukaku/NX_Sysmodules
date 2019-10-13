@@ -86,6 +86,7 @@ static constexpr u64 TitleId_SafeMode    = 0x010000000000003Dul;
 static constexpr u64 TitleId_Olsc        = 0x010000000000003Eul;
 static constexpr u64 TitleId_Dt          = 0x010000000000003Ful;
 static constexpr u64 TitleId_Nd          = 0x0100000000000040ul;
+static constexpr u64 TitleId_Ngct        = 0x0100000000000041ul;
 
 static constexpr u64 TitleId_SystemEnd   = 0x01000000000007FFul;
 

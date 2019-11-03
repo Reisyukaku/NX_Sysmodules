@@ -300,6 +300,7 @@ void EmbeddedBoot2::Main() {
         closedir(titles_dir);
     }
 
+
     /* We no longer need the SD card. */
     fsdevUnmountAll();
 

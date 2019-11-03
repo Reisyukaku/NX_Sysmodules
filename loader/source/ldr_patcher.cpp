@@ -231,7 +231,7 @@ static void ApplyRnxPatch(FILE* patch_file, u8 *mapped_nso, size_t mapped_size)
 }
 
 void PatchUtils::ApplyPatches(const NsoUtils::NsoHeader *header, u64 title_id, u8 *mapped_nso, size_t mapped_size) {
-    /* Inspect all patches from /ReiNX/patches/<*>/<*>.ips */
+    /* Inspect all patches from /ReiNX/patches/<*>/<*>.ips */    
     char magic[4] = {0};
     u64 read_id;
     char path[FS_MAX_PATH+1] = {0};

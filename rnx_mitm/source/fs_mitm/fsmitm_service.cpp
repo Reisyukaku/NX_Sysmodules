@@ -24,7 +24,6 @@
 #include "fs_shim.h"
 
 #include "../utils.hpp"
-#include "fsmitm_boot0storage.hpp"
 #include "fsmitm_romstorage.hpp"
 #include "fsmitm_layeredrom.hpp"
 
@@ -266,9 +265,7 @@ Result FsMitmService::OpenBisStorage(Out<std::shared_ptr<IStorageInterface>> out
         if (R_SUCCEEDED(rc)) {
             const bool is_sysmodule = TitleIdIsSystem(this->title_id);
             const bool has_bis_write_flag = Utils::HasFlag(this->title_id, "bis_write");
-            if (bis_partition_id == BisStorageId_Boot0) {
-                storage = std::make_shared<IStorageInterface>(new Boot0Storage(bis_storage, this->title_id));
-            } else if (bis_partition_id == BisStorageId_Prodinfo) {
+            if (bis_partition_id == BisStorageId_Prodinfo) {
                 if (is_sysmodule) {
                     storage = std::make_shared<IStorageInterface>(new ProxyStorage(bis_storage));
                 } else {

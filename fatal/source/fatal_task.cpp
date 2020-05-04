@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,9 +13,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#include <switch.h>
-#include "fatal_types.hpp"
 #include "fatal_task.hpp"
 
 #include "fatal_task_error_report.hpp"
@@ -24,42 +21,61 @@
 #include "fatal_task_clock.hpp"
 #include "fatal_task_power.hpp"
 
+namespace ams::fatal::srv {
 
-static constexpr size_t MaxTasks = 8;
-static HosThread g_task_threads[MaxTasks];
-static size_t g_num_threads = 0;
+    namespace {
 
+        class TaskThread {
+            NON_COPYABLE(TaskThread);
+            private:
+                static constexpr s32 TaskThreadPriority = -13;
+            private:
+                os::ThreadType thread;
+            private:
+                static void RunTaskImpl(void *arg) {
+                    ITask *task = reinterpret_cast<ITask *>(arg);
 
-static void RunTaskThreadFunc(void *arg) {
-    IFatalTask *task = reinterpret_cast<IFatalTask *>(arg);
-    
-    Result rc = task->Run();
-    if (R_FAILED(rc)) {
-        /* TODO: Log task failure, somehow? */
+                    if (R_FAILED(task->Run())) {
+                        /* TODO: Log task failure, somehow? */
+                    }
+                }
+            public:
+                TaskThread() { /* ... */ }
+                void StartTask(ITask *task) {
+                    R_ABORT_UNLESS(os::CreateThread(std::addressof(this->thread), RunTaskImpl, task, task->GetStack(), task->GetStackSize(), TaskThreadPriority, 3));
+                    os::StartThread(std::addressof(this->thread));
+                }
+        };
+
+        class TaskManager {
+            NON_COPYABLE(TaskManager);
+            private:
+                static constexpr size_t MaxTasks = 8;
+            private:
+                TaskThread task_threads[MaxTasks];
+                size_t task_count = 0;
+            public:
+                TaskManager() { /* ... */ }
+                void StartTask(ITask *task) {
+                    AMS_ABORT_UNLESS(this->task_count < MaxTasks);
+                    this->task_threads[this->task_count++].StartTask(task);
+                }
+        };
+
+        /* Global task manager. */
+        TaskManager g_task_manager;
+
     }
-    
-    /* Finish. */
-    svcExitThread();
-}
 
-static void RunTask(IFatalTask *task, u32 stack_size = 0x4000) {    
-    if (g_num_threads >= MaxTasks) {
-        std::abort();
+    void RunTasks(const ThrowContext *ctx) {
+        g_task_manager.StartTask(GetErrorReportTask(ctx));
+        g_task_manager.StartTask(GetPowerControlTask(ctx));
+        g_task_manager.StartTask(GetShowFatalTask(ctx));
+        g_task_manager.StartTask(GetStopSoundTask(ctx));
+        g_task_manager.StartTask(GetBacklightControlTask(ctx));
+        g_task_manager.StartTask(GetAdjustClockTask(ctx));
+        g_task_manager.StartTask(GetPowerButtonObserveTask(ctx));
+        g_task_manager.StartTask(GetStateTransitionStopTask(ctx));
     }
-    
-    HosThread *cur_thread = &g_task_threads[g_num_threads++];
-    
-    cur_thread->Initialize(&RunTaskThreadFunc, task, stack_size, 15);
-    cur_thread->Start();
-}
 
-void RunFatalTasks(FatalThrowContext *ctx, u64 title_id, bool error_report, Event *erpt_event, Event *battery_event) {
-    RunTask(new ErrorReportTask(ctx, title_id, error_report, erpt_event));
-    RunTask(new PowerControlTask(ctx, title_id, erpt_event, battery_event));
-    RunTask(new ShowFatalTask(ctx, title_id, battery_event), 0x10000);
-    RunTask(new StopSoundTask(ctx, title_id));
-    RunTask(new BacklightControlTask(ctx, title_id));
-    RunTask(new AdjustClockTask(ctx, title_id));
-    RunTask(new PowerButtonObserveTask(ctx, title_id, erpt_event));
-    RunTask(new StateTransitionStopTask(ctx, title_id));
 }

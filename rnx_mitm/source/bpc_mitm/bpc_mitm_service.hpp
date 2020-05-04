@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,42 +13,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
 #include <stratosphere.hpp>
 
-#include "../utils.hpp"
+namespace ams::mitm::bpc {
 
-enum BpcCmd : u32 {
-    BpcCmd_ShutdownSystem = 0,
-    BpcCmd_RebootSystem = 1,
-};
+    class BpcMitmService  : public sf::IMitmServiceObject {
+        private:
+            enum class CommandId {
+                ShutdownSystem = 0,
+                RebootSystem   = 1,
+            };
+        public:
+            static bool ShouldMitm(const sm::MitmProcessInfo &client_info) {
+                /* We will mitm:
+                 * - am, to intercept the Reboot/Power buttons in the overlay menu.
+                 * - fatal, to simplify payload reboot logic significantly
+                 * - hbl, to allow homebrew to take advantage of the feature.
+                 */
+                return client_info.program_id == ncm::SystemProgramId::Am ||
+                       client_info.program_id == ncm::SystemProgramId::Fatal ||
+                       client_info.override_status.IsHbl();
+            }
+        public:
+            SF_MITM_SERVICE_OBJECT_CTOR(BpcMitmService) { /* ... */ }
+        protected:
+            /* Overridden commands. */
+            Result ShutdownSystem();
+            Result RebootSystem();
+        public:
+            DEFINE_SERVICE_DISPATCH_TABLE {
+                MAKE_SERVICE_COMMAND_META(ShutdownSystem),
+                MAKE_SERVICE_COMMAND_META(RebootSystem),
+            };
+    };
 
-class BpcMitmService : public IMitmServiceObject {
-    public:
-        BpcMitmService(std::shared_ptr<Service> s, u64 pid) : IMitmServiceObject(s, pid) {
-            /* ... */
-        }
-        
-        static bool ShouldMitm(u64 pid, u64 tid) {
-            /* We will mitm:
-             * - am, to intercept the Reboot/Power buttons in the overlay menu.
-             * - fatal, to simplify payload reboot logic significantly
-             * - applications, to allow homebrew to take advantage of the feature.
-             */
-            return tid == TitleId_Am || tid == TitleId_Fatal || TitleIdIsApplication(tid) || Utils::IsHblTid(tid);
-        }
-        
-        static void PostProcess(IMitmServiceObject *obj, IpcResponseContext *ctx);
-                    
-    protected:
-        /* Overridden commands. */
-        Result ShutdownSystem();
-        Result RebootSystem();
-    public:
-        DEFINE_SERVICE_DISPATCH_TABLE {
-            MakeServiceCommandMeta<BpcCmd_ShutdownSystem, &BpcMitmService::ShutdownSystem>(),
-            MakeServiceCommandMeta<BpcCmd_RebootSystem, &BpcMitmService::RebootSystem>(),
-        };
-};
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,19 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
-#include <stratosphere.hpp>
 #include "fatal_task.hpp"
 
-class StopSoundTask : public IFatalTask {
-    private:
-        void StopSound();
-    public:
-        StopSoundTask(FatalThrowContext *ctx, u64 title_id) : IFatalTask(ctx, title_id) { }
-        virtual Result Run() override;
-        virtual const char *GetName() const override {
-            return "SoundTask";
-        }
-};
+namespace ams::fatal::srv {
+
+    ITask *GetStopSoundTask(const ThrowContext *ctx);
+
+}

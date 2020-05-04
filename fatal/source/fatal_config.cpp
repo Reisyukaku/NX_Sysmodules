@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,70 +13,92 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#include <switch.h>
-#include "fatal_types.hpp"
 #include "fatal_config.hpp"
 
-static FatalConfig g_fatal_config;
+namespace ams::fatal::srv {
 
-static IEvent *g_fatal_settings_event = nullptr;
+    namespace {
 
-FatalConfig *GetFatalConfig() {
-    return &g_fatal_config;
-}
+        /* Global config. */
+        FatalConfig g_config;
 
-static void UpdateLanguageCode() {
-    setGetLanguageCode(&GetFatalConfig()->language_code);
-}
-
-IEvent *GetFatalSettingsEvent() {
-    if (g_fatal_settings_event == nullptr) {
-        Event evt;
-        if (R_FAILED(setsysBindFatalDirtyFlagEvent(&evt))) {
-            std::abort();
+        /* Event creator. */
+        Handle GetFatalDirtyEventReadableHandle() {
+            Event evt;
+            R_ABORT_UNLESS(setsysAcquireFatalDirtyFlagEventHandle(&evt));
+            return evt.revent;
         }
-        g_fatal_settings_event = LoadReadOnlySystemEvent(evt.revent, [](u64 timeout) {
-            u64 flags_0, flags_1;
-            if (R_SUCCEEDED(setsysGetFatalDirtyFlags(&flags_0, &flags_1)) && (flags_0 & 1)) { 
-                UpdateLanguageCode();
-            }
-            return 0;
-        }, true);
-    }
-    
-    return g_fatal_settings_event;
-}
 
-static void SetupConfigLanguages() {
-    FatalConfig *config = GetFatalConfig();
-    
-    /* Defaults. */
-    config->error_msg   = u8"Error Code: 2%03d-%04d (0x%x)\n";
-    
-    if (config->quest_flag) {
-        config->error_desc = u8"Please call 1-800-875-1852 for service.\n";
-    } else {
-        config->error_desc = u8"An error has occured.\n\n"
-                             u8"Please press the POWER Button to restart the console.\n"
-                             u8"If you are unable to restart the console, \n"
-                             u8"hold the POWER Button for 12 seconds.\n\n";
-    }
-}
+        /* Global event. */
+        os::SystemEventType g_fatal_dirty_event;
+        os::WaitableHolderType g_fatal_dirty_waitable_holder;
+        bool g_initialized;
 
-void InitializeFatalConfig() {
-    FatalConfig *config = GetFatalConfig();
-    
-    memset(config, 0, sizeof(*config));
-    setsysGetSerialNumber(config->serial_number);
-    setsysGetFirmwareVersion(&config->firmware_version);
-    UpdateLanguageCode();
-    
-    setsysGetSettingsItemValue("fatal", "transition_to_fatal", &config->transition_to_fatal, sizeof(config->transition_to_fatal));
-    setsysGetSettingsItemValue("fatal", "show_extra_info", &config->show_extra_info, sizeof(config->show_extra_info));
-    setsysGetSettingsItemValue("fatal", "quest_reboot_interval_second", &config->quest_reboot_interval_second, sizeof(config->quest_reboot_interval_second));
-    
-    setsysGetFlag(SetSysFlag_Quest, &config->quest_flag);
-    
-    SetupConfigLanguages();
+    }
+
+    os::WaitableHolderType *GetFatalDirtyWaitableHolder() {
+        if (AMS_UNLIKELY(!g_initialized)) {
+            os::AttachReadableHandleToSystemEvent(std::addressof(g_fatal_dirty_event), GetFatalDirtyEventReadableHandle(), true, os::EventClearMode_ManualClear);
+            os::InitializeWaitableHolder(std::addressof(g_fatal_dirty_waitable_holder), std::addressof(g_fatal_dirty_event));
+            os::SetWaitableHolderUserData(std::addressof(g_fatal_dirty_waitable_holder), reinterpret_cast<uintptr_t>(std::addressof(g_fatal_dirty_waitable_holder)));
+            g_initialized = true;
+        }
+        return std::addressof(g_fatal_dirty_waitable_holder);
+    }
+
+    void OnFatalDirtyEvent() {
+        os::ClearSystemEvent(std::addressof(g_fatal_dirty_event));
+
+        u64 flags_0, flags_1;
+        if (R_SUCCEEDED(setsysGetFatalDirtyFlags(&flags_0, &flags_1)) && (flags_0 & 1)) {
+            g_config.UpdateLanguageCode();
+        }
+    }
+
+    FatalConfig::FatalConfig() {
+        /* Clear this. */
+        std::memset(this, 0, sizeof(*this));
+
+        /* Get information from set. */
+        settings::system::GetSerialNumber(std::addressof(this->serial_number));
+        settings::system::GetFirmwareVersion(std::addressof(this->firmware_version));
+        setsysGetQuestFlag(&this->quest_flag);
+        this->UpdateLanguageCode();
+
+        /* Read information from settings. */
+        settings::fwdbg::GetSettingsItemValue(&this->transition_to_fatal, sizeof(this->transition_to_fatal), "fatal", "transition_to_fatal");
+        settings::fwdbg::GetSettingsItemValue(&this->show_extra_info, sizeof(this->show_extra_info), "fatal", "show_extra_info");
+        settings::fwdbg::GetSettingsItemValue(&this->quest_reboot_interval_second, sizeof(this->quest_reboot_interval_second), "fatal", "quest_reboot_interval_second");
+
+        /* Atmosphere extension for automatic reboot. */
+        if (settings::fwdbg::GetSettingsItemValue(&this->fatal_auto_reboot_interval, sizeof(this->fatal_auto_reboot_interval), "atmosphere", "fatal_auto_reboot_interval") == sizeof(this->fatal_auto_reboot_interval)) {
+            this->fatal_auto_reboot_enabled = this->fatal_auto_reboot_interval != 0;
+        }
+
+        /* Setup messages. */
+        {
+            this->error_msg = u8"Error Code: 2%03d-%04d (0x%x)\n";
+
+            this->error_desc = u8"An error has occured.\n\n"
+                                 u8"Please press the POWER Button to restart the console.\n"
+                                 u8"If you are unable to restart the console, \n"
+                                 u8"hold the POWER Button for 12 seconds.\n\n";
+
+            /* If you're running Atmosphere on a quest unit for some reason, talk to me on discord. */
+            this->quest_desc = u8"Please call 1-800-875-1852 for service.\n\n"
+                                 u8"Also, please be aware that running ReiNX on a Quest device is not fully\n"
+                                 u8"supported. Perhaps try booting your device without ReiNX before calling\n"
+                                 u8"an official Nintendo service hotline. If you encounter further issues, please\n"
+                                 u8"contact SciresM#0524 on Discord, or via some other means.\n";
+
+            /* TODO: Try to load dynamically? */
+            /* FsStorage message_storage; */
+            /* TODO: if (R_SUCCEEDED(fsOpenDataStorageByDataId(0x010000000000081D, "fatal_msg"))) { ... } */
+        }
+    }
+
+    const FatalConfig &GetFatalConfig() {
+        return g_config;
+    }
+
 }

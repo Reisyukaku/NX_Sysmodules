@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,51 +13,67 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
+#include <stratosphere.hpp>
 
-#include "ldr_registration.hpp"
+namespace ams::ldr {
 
-class ContentManagement {
-    public:
-        static Result MountCode(u64 tid, FsStorageId sid);
-        static Result MountCodeNspOnSd(u64 tid);
-        static void TryMountHblNspOnSd();
-        static Result UnmountCode();
-        static Result MountCodeForTidSid(Registration::TidSid *tid_sid);
+    /* Utility reference to make code mounting automatic. */
+    class ScopedCodeMount {
+        NON_COPYABLE(ScopedCodeMount);
+        NON_MOVEABLE(ScopedCodeMount);
+        private:
+            std::scoped_lock<os::Mutex> lk;
+            cfg::OverrideStatus override_status;
+            fs::CodeInfo ams_code_info;
+            fs::CodeInfo sd_or_base_code_info;
+            fs::CodeInfo base_code_info;
+            Result result;
+            bool has_status;
+            bool mounted_ams;
+            bool mounted_sd_or_code;
+            bool mounted_code;
+        public:
+            ScopedCodeMount(const ncm::ProgramLocation &loc);
+            ScopedCodeMount(const ncm::ProgramLocation &loc, const cfg::OverrideStatus &override_status);
+            ~ScopedCodeMount();
 
-        static Result ResolveContentPath(char *out_path, u64 tid, FsStorageId sid);
-        static Result RedirectContentPath(const char *path, u64 tid, FsStorageId sid);
-        static Result ResolveContentPathForTidSid(char *out_path, Registration::TidSid *tid_sid);
-        static Result RedirectContentPathForTidSid(const char *path, Registration::TidSid *tid_sid);
-        
-        static bool HasCreatedTitle(u64 tid);
-        static void SetCreatedTitle(u64 tid);
-        static void TryMountSdCard();
+            Result GetResult() const {
+                return this->result;
+            }
 
-        static bool ShouldOverrideContentsWithSD(u64 tid);
-        static bool ShouldOverrideContentsWithHBL(u64 tid);
+            const cfg::OverrideStatus &GetOverrideStatus() const {
+                AMS_ABORT_UNLESS(this->has_status);
+                return this->override_status;
+            }
 
-        static u64 HbOverrideTid;
+            const fs::CodeInfo &GetAtmosphereCodeInfo() const {
+                return this->ams_code_info;
+            }
 
-        /* SetExternalContentSource extension */
-        class ExternalContentSource {
-            public:
-                static void GenerateMountpointName(u64 tid, char *out, size_t max_length);
+            const fs::CodeInfo &GetSdOrBaseCodeInfo() const {
+                return this->sd_or_base_code_info;
+            }
 
-                ExternalContentSource(u64 tid, const char *mountpoint);
-                ~ExternalContentSource();
+            const fs::CodeInfo &GetCodeInfo() const {
+                return this->base_code_info;
+            }
+        private:
+            Result Initialize(const ncm::ProgramLocation &loc);
+            void EnsureOverrideStatus(const ncm::ProgramLocation &loc);
+    };
 
-                ExternalContentSource(const ExternalContentSource &other) = delete;
-                ExternalContentSource(ExternalContentSource &&other) = delete;
-                ExternalContentSource &operator=(const ExternalContentSource &other) = delete;
-                ExternalContentSource &operator=(ExternalContentSource &&other) = delete;
+    constexpr inline const char * const AtmosphereCodeMountName = "ams-code";
+    constexpr inline const char * const SdOrCodeMountName       = "sd-code";
+    constexpr inline const char * const CodeMountName           = "code";
 
-                const u64 tid;
-                char mountpoint[32];
-        };
-        static ExternalContentSource *GetExternalContentSource(u64 tid); /* returns nullptr if no ECS is set */
-        static Result SetExternalContentSource(u64 tid, FsFileSystem filesystem); /* takes ownership of filesystem */
-        static void ClearExternalContentSource(u64 tid);
-};
+    #define ENCODE_ATMOSPHERE_CODE_PATH(relative) "ams-code:" relative
+    #define ENCODE_SD_OR_CODE_PATH(relative) "sd-code:" relative
+    #define ENCODE_CODE_PATH(relative) "code:" relative
+
+    /* Redirection API. */
+    Result ResolveContentPath(char *out_path, const ncm::ProgramLocation &loc);
+    Result RedirectContentPath(const char *path, const ncm::ProgramLocation &loc);
+    Result RedirectHtmlDocumentPathForHbl(const ncm::ProgramLocation &loc);
+
+}

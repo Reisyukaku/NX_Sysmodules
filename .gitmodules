@@ -1,4 +1,4 @@
-[submodule "libstratosphere"]
-	path = libstratosphere
-	url = https://github.com/Atmosphere-NX/libstratosphere.git
-    
+[submodule "libraries"]
+	path = libraries
+	url = https://github.com/D3fau4/ReiNX-libs.git
+	branch = master

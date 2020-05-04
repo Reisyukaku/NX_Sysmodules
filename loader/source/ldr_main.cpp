@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,39 +13,47 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-#include <malloc.h>
 
-#include <switch.h>
-#include <stratosphere.hpp>
-
-#include "ldr_process_manager.hpp"
-#include "ldr_debug_monitor.hpp"
-#include "ldr_shell.hpp"
-#include "ldr_ro_service.hpp"
-#include "ldr_tx.hpp"
-#include "ldr_usbfs.hpp"
-#include "ldr_cht.hpp"
-#include "ldr_rei.hpp"
+#include "ldr_development_manager.hpp"
+#include "ldr_loader_service.hpp"
 
 extern "C" {
     extern u32 __start__;
 
     u32 __nx_applet_type = AppletType_None;
+    u32 __nx_fs_num_sessions = 1;
 
-    #define INNER_HEAP_SIZE 0x20000
+    #define INNER_HEAP_SIZE 0x8000
     size_t nx_inner_heap_size = INNER_HEAP_SIZE;
     char   nx_inner_heap[INNER_HEAP_SIZE];
-    
+
     void __libnx_initheap(void);
     void __appInit(void);
     void __appExit(void);
 
+    /* Exception handling. */
+    alignas(16) u8 __nx_exception_stack[ams::os::MemoryPageSize];
+    u64 __nx_exception_stack_size = sizeof(__nx_exception_stack);
+    void __libnx_exception_handler(ThreadExceptionDump *ctx);
 }
 
+namespace ams {
+
+    ncm::ProgramId CurrentProgramId = ncm::SystemProgramId::Loader;
+
+    namespace result {
+
+        bool CallFatalOnResultAssertion = false;
+
+    }
+
+}
+
+using namespace ams;
+
+void __libnx_exception_handler(ThreadExceptionDump *ctx) {
+    ams::CrashHandler(ctx);
+}
 
 void __libnx_initheap(void) {
 	void*  addr = nx_inner_heap;
@@ -60,70 +68,75 @@ void __libnx_initheap(void) {
 }
 
 void __appInit(void) {
-    Result rc;
-    
-    SetFirmwareVersionForLibnx();
+    hos::InitializeForStratosphere();
 
-    /* Initialize services we need (TODO: SPL) */
-    rc = smInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_SM));
-    }
-    
-    rc = fsInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
-    }
-    
-    rc = lrInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 1);
-    }
-    
-    rc = fsldrInitialize();
-    if (R_FAILED(rc))  {
-        fatalSimple(0xCAFE << 4 | 2);
-    }
+    /* Initialize services we need. */
+    sm::DoWithSession([&]() {
+        R_ABORT_UNLESS(fsInitialize());
+        lr::Initialize();
+        R_ABORT_UNLESS(fsldrInitialize());
+        R_ABORT_UNLESS(splInitialize());
+    });
+
+    ams::CheckApiVersion();
 }
 
 void __appExit(void) {
     /* Cleanup services. */
-    fsdevUnmountAll();
+    splExit();
     fsldrExit();
-    lrExit();
+    lr::Finalize();
     fsExit();
-    smExit();
 }
 
-struct LoaderServerOptions {
-    static constexpr size_t PointerBufferSize = 0x400;
-    static constexpr size_t MaxDomains = 0;
-    static constexpr size_t MaxDomainObjects = 0;
-};
+namespace {
+
+    struct ServerOptions {
+        static constexpr size_t PointerBufferSize = 0x400;
+        static constexpr size_t MaxDomains = 0;
+        static constexpr size_t MaxDomainObjects = 0;
+    };
+
+    constexpr sm::ServiceName TXServicesServiceName = sm::ServiceName::Encode("tx");
+    constexpr size_t          TXServicesMaxSessions = 1;
+
+    constexpr sm::ServiceName RNXServicesServiceName = sm::ServiceName::Encode("rnx");
+    constexpr size_t          RNXServicesMaxSessions = 2;
+
+    constexpr sm::ServiceName ProcessManagerServiceName = sm::ServiceName::Encode("ldr:pm");
+    constexpr size_t          ProcessManagerMaxSessions = 1;
+
+    constexpr sm::ServiceName ShellServiceName = sm::ServiceName::Encode("ldr:shel");
+    constexpr size_t          ShellMaxSessions = 3;
+
+    constexpr sm::ServiceName DebugMonitorServiceName = sm::ServiceName::Encode("ldr:dmnt");
+    constexpr size_t          DebugMonitorMaxSessions = 3;
+
+    /* ldr:pm, ldr:shel, ldr:dmnt, tx, rnx */
+    constexpr size_t NumServers  = 5;
+    constexpr size_t MaxSessions = ProcessManagerMaxSessions + ShellMaxSessions + DebugMonitorMaxSessions + RNXServicesMaxSessions + TXServicesMaxSessions + 1;
+    sf::hipc::ServerManager<NumServers, ServerOptions, MaxSessions> g_server_manager;
+
+}
 
 int main(int argc, char **argv)
 {
-    
-    auto server_manager = new WaitableManager<LoaderServerOptions>(1);
-    
+    /* Configure development. */
+    /* NOTE: Nintendo really does call the getter function three times instead of caching the value. */
+    ldr::SetDevelopmentForAcidProductionCheck(true);
+    ldr::SetDevelopmentForAntiDowngradeCheck(spl::IsDevelopmentHardware());
+    ldr::SetDevelopmentForAcidSignatureCheck(spl::IsDevelopmentHardware());
+
     /* Add services to manager. */
-    server_manager->AddWaitable(new ServiceServer<RNXService>("rnx", 1));
-    server_manager->AddWaitable(new ServiceServer<UsbfsService>("usbfs", 1));
-    server_manager->AddWaitable(new ServiceServer<TXService>("tx", 1));
-    server_manager->AddWaitable(new ServiceServer<CheatService>("ldr:cht", 1));
-    server_manager->AddWaitable(new ServiceServer<ProcessManagerService>("ldr:pm", 1));
-    server_manager->AddWaitable(new ServiceServer<ShellService>("ldr:shel", 3));
-    server_manager->AddWaitable(new ServiceServer<DebugMonitorService>("ldr:dmnt", 2));
-    if (GetRuntimeFirmwareVersion() < FirmwareVersion_300) {
-        /* On 1.0.0-2.3.0, Loader services ldr:ro instead of ro. */
-        server_manager->AddWaitable(new ServiceServer<RelocatableObjectsService>("ldr:ro", 0x20));
-    }
-    
+    R_ABORT_UNLESS((g_server_manager.RegisterServer<ldr::TX::TXService>(TXServicesServiceName, TXServicesMaxSessions)));
+    R_ABORT_UNLESS((g_server_manager.RegisterServer<ldr::rnx::RNXService>(RNXServicesServiceName, RNXServicesMaxSessions)));
+    R_ABORT_UNLESS((g_server_manager.RegisterServer<ldr::pm::ProcessManagerInterface>(ProcessManagerServiceName, ProcessManagerMaxSessions)));
+    R_ABORT_UNLESS((g_server_manager.RegisterServer<ldr::shell::ShellInterface>(ShellServiceName, ShellMaxSessions)));
+    R_ABORT_UNLESS((g_server_manager.RegisterServer<ldr::dmnt::DebugMonitorInterface>(DebugMonitorServiceName, DebugMonitorMaxSessions)));
+
     /* Loop forever, servicing our services. */
-    server_manager->Process();
-    
-    delete server_manager;
-    
+    g_server_manager.LoopProcess();
+
 	return 0;
 }
 

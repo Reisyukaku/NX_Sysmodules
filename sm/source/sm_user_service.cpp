@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,113 +13,78 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#include <switch.h>
-#include <stratosphere.hpp>
 #include "sm_user_service.hpp"
-#include "sm_registration.hpp"
+#include "impl/sm_service_manager.hpp"
 
-Result UserService::Initialize(PidDescriptor pid) {
-    this->pid = pid.pid;
-    this->has_initialized = true;
-    return ResultSuccess;
-}
+namespace ams::sm {
 
-Result UserService::GetService(Out<MovedHandle> out_h, SmServiceName service) {
-    Handle session_h = 0;
-    Result rc = ResultSmInvalidClient;
-    
-#ifdef SM_ENABLE_SMHAX
-    if (!this->has_initialized) {
-        rc = Registration::GetServiceForPid(Registration::GetInitialProcessId(), smEncodeName(service.name), &session_h);
+    Result UserService::Initialize(const sf::ClientProcessId &client_process_id) {
+        this->process_id = client_process_id.GetValue();
+        this->has_initialized = true;
+        return ResultSuccess();
     }
-#endif
-    if (this->has_initialized) {
-        rc = Registration::GetServiceForPid(this->pid, smEncodeName(service.name), &session_h);
-    }
-    
-    if (R_SUCCEEDED(rc)) {
-        out_h.SetValue(session_h);
-    }
-    return rc;
-}
 
-Result UserService::RegisterService(Out<MovedHandle> out_h, SmServiceName service, u32 max_sessions, bool is_light) {
-    Handle service_h = 0;
-    Result rc = ResultSmInvalidClient;
-#ifdef SM_ENABLE_SMHAX
-    if (!this->has_initialized) {
-        rc = Registration::RegisterServiceForPid(Registration::GetInitialProcessId(), smEncodeName(service.name), max_sessions, (is_light & 1) != 0, &service_h);
-    }
-#endif
-    if (this->has_initialized) {
-        rc = Registration::RegisterServiceForPid(this->pid, smEncodeName(service.name), max_sessions, (is_light & 1) != 0, &service_h);
-    }
-    
-    if (R_SUCCEEDED(rc)) {
-        out_h.SetValue(service_h);
-    }
-    return rc;
-}
-
-Result UserService::UnregisterService(SmServiceName service) {
-    Result rc = ResultSmInvalidClient;
-#ifdef SM_ENABLE_SMHAX
-    if (!this->has_initialized) {
-        rc = Registration::UnregisterServiceForPid(Registration::GetInitialProcessId(), smEncodeName(service.name));
-    }
-#endif
-    if (this->has_initialized) {
-        rc = Registration::UnregisterServiceForPid(this->pid, smEncodeName(service.name));
-    }
-    return rc;
-}
-
-Result UserService::AtmosphereInstallMitm(Out<MovedHandle> srv_h, Out<MovedHandle> qry_h, SmServiceName service) {
-    Handle service_h = 0;
-    Handle query_h = 0;
-    Result rc = ResultSmInvalidClient;
-    if (this->has_initialized) {
-        rc = Registration::InstallMitmForPid(this->pid, smEncodeName(service.name), &service_h, &query_h);
-    }
-    
-    if (R_SUCCEEDED(rc)) {
-        srv_h.SetValue(service_h);
-        qry_h.SetValue(query_h);
-    }
-    return rc;
-}
-
-Result UserService::AtmosphereUninstallMitm(SmServiceName service) {
-    Result rc = ResultSmInvalidClient;
-    if (this->has_initialized) {
-        rc = Registration::UninstallMitmForPid(this->pid, smEncodeName(service.name));
-    }
-    return rc;
-}
-
-Result UserService::AtmosphereAcknowledgeMitmSession(Out<u64> client_pid, Out<MovedHandle> fwd_h, SmServiceName service) {
-    Result rc = ResultSmInvalidClient;
-    Handle out_fwd_h = 0;
-    if (this->has_initialized) {
-        rc = Registration::AcknowledgeMitmSessionForPid(this->pid, smEncodeName(service.name), &out_fwd_h, client_pid.GetPointer());
-    }
-    
-    if (R_SUCCEEDED(rc)) {
-        fwd_h.SetValue(out_fwd_h);
-    }
-    
-    return rc;
-}
-
-Result UserService::AtmosphereAssociatePidTidForMitm(u64 pid, u64 tid) {
-    Result rc = ResultSmInvalidClient;
-    if (this->has_initialized) {
-        if (Registration::IsInitialProcess(pid)) {
-            rc = ResultSmNotAllowed;
-        } else {
-            rc = Registration::AssociatePidTidForMitm(pid, tid);
+    Result UserService::EnsureInitialized() {
+        if (!this->has_initialized) {
+            return sm::ResultInvalidClient();
         }
+        return ResultSuccess();
     }
-    return rc;
+
+    Result UserService::GetService(sf::OutMoveHandle out_h, ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::GetServiceHandle(out_h.GetHandlePointer(), this->process_id, service);
+    }
+
+    Result UserService::RegisterService(sf::OutMoveHandle out_h, ServiceName service, u32 max_sessions, bool is_light) {
+        R_TRY(this->EnsureInitialized());
+        return impl::RegisterService(out_h.GetHandlePointer(), this->process_id, service, max_sessions, is_light);
+    }
+
+    Result UserService::UnregisterService(ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::UnregisterService(this->process_id, service);
+    }
+
+    Result UserService::AtmosphereInstallMitm(sf::OutMoveHandle srv_h, sf::OutMoveHandle qry_h, ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::InstallMitm(srv_h.GetHandlePointer(), qry_h.GetHandlePointer(), this->process_id, service);
+    }
+
+    Result UserService::AtmosphereUninstallMitm(ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::UninstallMitm(this->process_id, service);
+    }
+
+    Result UserService::AtmosphereAcknowledgeMitmSession(sf::Out<MitmProcessInfo> client_info, sf::OutMoveHandle fwd_h, ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::AcknowledgeMitmSession(client_info.GetPointer(), fwd_h.GetHandlePointer(), this->process_id, service);
+    }
+
+    Result UserService::AtmosphereHasMitm(sf::Out<bool> out, ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::HasMitm(out.GetPointer(), service);
+    }
+
+    Result UserService::AtmosphereWaitMitm(ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::WaitMitm(service);
+    }
+
+    Result UserService::AtmosphereDeclareFutureMitm(ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::DeclareFutureMitm(this->process_id, service);
+    }
+
+
+    Result UserService::AtmosphereHasService(sf::Out<bool> out, ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::HasService(out.GetPointer(), service);
+    }
+
+    Result UserService::AtmosphereWaitService(ServiceName service) {
+        R_TRY(this->EnsureInitialized());
+        return impl::WaitService(service);
+    }
+
 }

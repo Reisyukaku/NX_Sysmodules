@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,22 +13,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
 #include <stratosphere.hpp>
 
-class FatalEventManager {
-    private:
-        static constexpr size_t NumFatalEvents = 3;
-        
-        HosMutex lock;
-        size_t events_gotten = 0;
-        Event events[NumFatalEvents];
-    public:
-        FatalEventManager();
-        Result GetEvent(Handle *out);
-        void SignalEvents();
-};
+namespace ams::fatal::srv {
 
-FatalEventManager *GetEventManager();
+    class FatalEventManager {
+        NON_COPYABLE(FatalEventManager);
+        NON_MOVEABLE(FatalEventManager);
+        public:
+            static constexpr size_t NumFatalEvents = 3;
+        private:
+            os::Mutex lock;
+            size_t num_events_gotten = 0;
+            os::SystemEventType events[NumFatalEvents];
+        public:
+            FatalEventManager();
+            Result GetEvent(const os::SystemEventType **out);
+            void SignalEvents();
+    };
+
+}

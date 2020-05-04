@@ -1,6 +1,6 @@
 /**
  * @file fs_shim.h
- * @brief Filesystem Services (fs) IPC wrapper. To be merged into libnx, eventually.
+ * @brief Filesystem Services (fs) IPC wrapper for fs.mitm.
  * @author SciresM
  * @copyright libnx Authors
  */
@@ -12,12 +12,16 @@ extern "C" {
 #endif
 
 /* Missing fsp-srv commands. */
-Result fsOpenBisStorageFwd(Service* s, FsStorage* out, u32 PartitionId);
+Result fsOpenSdCardFileSystemFwd(Service* s, FsFileSystem* out);
+Result fsOpenBisStorageFwd(Service* s, FsStorage* out, FsBisPartitionId partition_id);
 Result fsOpenDataStorageByCurrentProcessFwd(Service* s, FsStorage* out);
-Result fsOpenDataStorageByDataIdFwd(Service* s, FsStorageId storage_id, u64 data_id, FsStorage* out);
-Result fsOpenFileSystemWithPatchFwd(Service* s, FsFileSystem* out, u64 titleId, FsFileSystemType fsType);
-Result fsOpenFileSystemWithIdFwd(Service* s, FsFileSystem* out, u64 titleId, FsFileSystemType fsType, const char* contentPath);
-Result fsOpenSaveDataFileSystemFwd(Service* s, FsFileSystem* out, u8 inval, FsSave *save);
+Result fsOpenDataStorageByDataIdFwd(Service* s, FsStorage* out, u64 data_id, NcmStorageId storage_id);
+
+Result fsOpenSaveDataFileSystemFwd(Service* s, FsFileSystem* out, FsSaveDataSpaceId save_data_space_id, const FsSaveDataAttribute *attr);
+
+Result fsOpenFileSystemWithPatchFwd(Service* s, FsFileSystem* out, u64 id, FsFileSystemType fsType);
+Result fsOpenFileSystemWithIdFwd(Service* s, FsFileSystem* out, u64 id, FsFileSystemType fsType, const char* contentPath);
+
 
 #ifdef __cplusplus
 }

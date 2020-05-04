@@ -1,39 +1,59 @@
 /*
-* Copyright (c) 2018 EliseZeroTwo
-*
-* This program is free software; you can redistribute it and/or modify it
-* under the terms and conditions of the GNU General Public License,
-* version 2, as published by the Free Software Foundation.
-*
-* This program is distributed in the hope it will be useful, but WITHOUT
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-* more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (c) 2018-2020 Atmosphère-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include "creport_crash_report.hpp"
+#include "creport_utils.hpp"
 
-/* just so people stfu about creport memes */
-
-#include <switch.h>
-#include <stratosphere.hpp>
-#include <stdlib.h>
 
 extern "C" {
     extern u32 __start__;
 
     u32 __nx_applet_type = AppletType_None;
+    u32 __nx_fs_num_sessions = 1;
 
-    #define INNER_HEAP_SIZE 0x100000
+    #define INNER_HEAP_SIZE 0x4000
     size_t nx_inner_heap_size = INNER_HEAP_SIZE;
     char   nx_inner_heap[INNER_HEAP_SIZE];
 
     void __libnx_initheap(void);
     void __appInit(void);
     void __appExit(void);
+
+    /* Exception handling. */
+    alignas(16) u8 __nx_exception_stack[ams::os::MemoryPageSize];
+    u64 __nx_exception_stack_size = sizeof(__nx_exception_stack);
+    void __libnx_exception_handler(ThreadExceptionDump *ctx);
 }
 
+namespace ams {
+
+    ncm::ProgramId CurrentProgramId = ncm::SystemProgramId::Creport;
+
+    namespace result {
+
+        bool CallFatalOnResultAssertion = true;
+
+    }
+
+}
+
+using namespace ams;
+
+void __libnx_exception_handler(ThreadExceptionDump *ctx) {
+    ams::CrashHandler(ctx);
+}
 
 void __libnx_initheap(void) {
 	void*  addr = nx_inner_heap;
@@ -48,50 +68,76 @@ void __libnx_initheap(void) {
 }
 
 void __appInit(void) {
-    Result rc;
-    
-    SetFirmwareVersionForLibnx();
+    hos::InitializeForStratosphere();
 
-    rc = smInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_SM));
-    }
+    sm::DoWithSession([&]() {
+        R_ABORT_UNLESS(fsInitialize());
+    });
 
-    rc = fsInitialize();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
-    }
-
-    rc = fsdevMountSdmc();
-    if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
-    }
+    R_ABORT_UNLESS(fs::MountSdCard("sdmc"));
 }
 
 void __appExit(void) {
     /* Cleanup services. */
-    fsdevUnmountAll();
     fsExit();
-    smExit();
 }
 
-int main(int argc, char ** argv) {
-	if (argc < 2)
-		return 0;
+static creport::CrashReport g_crash_report;
 
-	for (int x = 0; x < argc; x++)
-		if (argv[x] == NULL)
-			return 0;
+int main(int argc, char **argv) {
+    /* Validate arguments. */
+    if (argc < 2) {
+        return EXIT_FAILURE;
+    }
+    for (int i = 0; i < argc; i++) {
+        if (argv[i] == NULL) {
+            return EXIT_FAILURE;
+        }
+    }
 
-	/* i seriously couldn't care less about crash reports so this is a REALLY stripped creport */
-	u64 pid = strtoull(argv[0], NULL, 10);
-	if (R_SUCCEEDED(nsdevInitialize())) {
-          nsdevTerminateProcess(pid);
-          nsdevExit();
-	}
-	if(kernelAbove500() || argv[1][0] == '1')
-		return 0;
+    /* Parse crashed PID. */
+    os::ProcessId crashed_pid = creport::ParseProcessIdArgument(argv[0]);
 
-	/* if we get here, just fatal with an incomplete report as the reason */
-	fatalSimple(0xC6A8);
+    /* Try to debug the crashed process. */
+    g_crash_report.BuildReport(crashed_pid, argv[1][0] == '1');
+    if (!g_crash_report.IsComplete()) {
+        return EXIT_FAILURE;
+    }
+
+    /* Save report to file. */
+    g_crash_report.SaveReport();
+
+    /* Try to terminate the process. */
+    if (hos::GetVersion() >= hos::Version_10_0_0) {
+        /* On 10.0.0+, use pgl to terminate. */
+        sm::ScopedServiceHolder<pglInitialize, pglExit> pgl_holder;
+        if (pgl_holder) {
+            pglTerminateProcess(static_cast<u64>(crashed_pid));
+        }
+    } else {
+        /* On < 10.0.0, use ns:dev to terminate. */
+        sm::ScopedServiceHolder<nsdevInitialize, nsdevExit> ns_holder;
+        if (ns_holder) {
+            nsdevTerminateProcess(static_cast<u64>(crashed_pid));
+        }
+    }
+
+    /* Don't fatal if we have extra info, or if we're 5.0.0+ and an application crashed. */
+    if (hos::GetVersion() >= hos::Version_5_0_0) {
+        if (g_crash_report.IsApplication()) {
+            return EXIT_SUCCESS;
+        }
+    } else if (argv[1][0] == '1') {
+        return EXIT_SUCCESS;
+    }
+
+    /* Also don't fatal if we're a user break. */
+    if (g_crash_report.IsUserBreak()) {
+        return EXIT_SUCCESS;
+    }
+
+    /* Throw fatal error. */
+    ::FatalCpuContext ctx;
+    g_crash_report.GetFatalContext(&ctx);
+    fatalThrowWithContext(g_crash_report.GetResult().GetValue(), FatalPolicy_ErrorScreen, &ctx);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,55 +13,44 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
 #include <stratosphere.hpp>
 
-#include "setsys_shim.h"
+namespace ams::mitm::settings {
 
-enum SetSysCmd : u32 {
-    SetSysCmd_GetFirmwareVersion = 3,
-    SetSysCmd_GetFirmwareVersion2 = 4,
-    SetSysCmd_GetSettingsItemValueSize = 37,
-    SetSysCmd_GetSettingsItemValue = 38,
-    
-    /* Commands for which set:sys *must* act as a passthrough. */
-    /* TODO: Solve the relevant IPC detection problem. */
-    SetSysCmd_GetEdid = 41,
-    SetSysCmd_GetQuestFlag = 47,
-};
+    class SetSysMitmService  : public sf::IMitmServiceObject {
+        private:
+            enum class CommandId {
+                GetFirmwareVersion       = 3,
+                GetFirmwareVersion2      = 4,
 
-class SetSysMitmService : public IMitmServiceObject {      
-    public:
-        SetSysMitmService(std::shared_ptr<Service> s, u64 pid) : IMitmServiceObject(s, pid) {
-            /* ... */
-        }
-        
-        static bool ShouldMitm(u64 pid, u64 tid) {
-            /* Mitm everything. */
-            return true;
-        }
-        
-        static void PostProcess(IMitmServiceObject *obj, IpcResponseContext *ctx);
-                    
-    protected:
-        /* Overridden commands. */
-        Result GetFirmwareVersion(OutPointerWithServerSize<SetSysFirmwareVersion, 0x1> out);
-        Result GetFirmwareVersion2(OutPointerWithServerSize<SetSysFirmwareVersion, 0x1> out);
-        Result GetSettingsItemValueSize(Out<u64> out_size, InPointer<char> name, InPointer<char> key);
-        Result GetSettingsItemValue(Out<u64> out_size, OutBuffer<u8> out_value, InPointer<char> name, InPointer<char> key);
-        Result GetQuestFlag(Out<bool> isQuest);
-        /* Forced passthrough commands. */
-        Result GetEdid(OutPointerWithServerSize<SetSysEdid, 0x1> out);
-    public:
-        DEFINE_SERVICE_DISPATCH_TABLE {
-            MakeServiceCommandMeta<SetSysCmd_GetFirmwareVersion, &SetSysMitmService::GetFirmwareVersion>(),
-            MakeServiceCommandMeta<SetSysCmd_GetFirmwareVersion2, &SetSysMitmService::GetFirmwareVersion2>(),
-            MakeServiceCommandMeta<SetSysCmd_GetSettingsItemValueSize, &SetSysMitmService::GetSettingsItemValueSize>(),
-            MakeServiceCommandMeta<SetSysCmd_GetSettingsItemValue, &SetSysMitmService::GetSettingsItemValue>(),
-            
-            MakeServiceCommandMeta<SetSysCmd_GetEdid, &SetSysMitmService::GetEdid>(),
-            MakeServiceCommandMeta<SetSysCmd_GetQuestFlag, &SetSysMitmService::GetQuestFlag>(),
-        };
-};
+                GetSettingsItemValueSize = 37,
+                GetSettingsItemValue     = 38,
+                GetQuestFlag             = 47,
+            };
+        public:
+            static bool ShouldMitm(const sm::MitmProcessInfo &client_info) {
+                /* We will mitm:
+                 * - everything, because we want to intercept all settings requests.
+                 */
+                return true;
+            }
+        public:
+            SF_MITM_SERVICE_OBJECT_CTOR(SetSysMitmService) { /* ... */ }
+        protected:
+            Result GetFirmwareVersion(sf::Out<ams::settings::FirmwareVersion> out);
+            Result GetFirmwareVersion2(sf::Out<ams::settings::FirmwareVersion> out);
+            Result GetSettingsItemValueSize(sf::Out<u64> out_size, const ams::settings::fwdbg::SettingsName &name, const ams::settings::fwdbg::SettingsItemKey &key);
+            Result GetSettingsItemValue(sf::Out<u64> out_size, const sf::OutBuffer &out, const ams::settings::fwdbg::SettingsName &name, const ams::settings::fwdbg::SettingsItemKey &key);
+            Result GetQuestFlag(sf::Out<bool> isQuest);
+        public:
+            DEFINE_SERVICE_DISPATCH_TABLE {
+                MAKE_SERVICE_COMMAND_META(GetFirmwareVersion),
+                MAKE_SERVICE_COMMAND_META(GetFirmwareVersion2),
+                MAKE_SERVICE_COMMAND_META(GetSettingsItemValueSize),
+                MAKE_SERVICE_COMMAND_META(GetSettingsItemValue),
+                MAKE_SERVICE_COMMAND_META(GetQuestFlag),
+            };
+    };
+
+}

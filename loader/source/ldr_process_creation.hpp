@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,29 +13,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
+#include "ldr_arguments.hpp"
 
-#include "ldr_registration.hpp"
-#include "ldr_launch_queue.hpp"
-#include "ldr_npdm.hpp"
+namespace ams::ldr {
 
-/* Utilities for Process Creation, for Loader. */
+    /* Process Creation API. */
+    Result CreateProcess(Handle *out, PinId pin_id, const ncm::ProgramLocation &loc, const cfg::OverrideStatus &override_status, const char *path, u32 flags, Handle reslimit_h);
+    Result GetProgramInfo(ProgramInfo *out, cfg::OverrideStatus *out_status, const ncm::ProgramLocation &loc);
 
-class ProcessCreation {
-    public:
-        struct ProcessInfo {
-            u8 name[12];
-            u32 version;
-            u64 title_id;
-            u64 code_addr;
-            u32 code_num_pages;
-            u32 process_flags;
-            Handle reslimit_h;
-            u32 system_resource_num_pages;
-        };
-        static Result ValidateProcessVersion(u64 title_id, u32 version);
-        static Result InitializeProcessInfo(NpdmUtils::NpdmInfo *npdm, Handle reslimit_h, u64 arg_flags, ProcessInfo *out_proc_info);
-        static Result CreateProcess(Handle *out_process_h, u64 index, char *nca_path, LaunchQueue::LaunchItem *launch_item, u64 arg_flags, Handle reslimit_h);
-};
+}

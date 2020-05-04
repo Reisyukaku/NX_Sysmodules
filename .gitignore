@@ -8,6 +8,8 @@ creport/0100000000000036
 **/*.npdm
 **/build
 **/main
+Sysmodules/*
 libstratosphere/release/*
 libstratosphere/lib/*
 libstratosphere/debug/*
+*.bin

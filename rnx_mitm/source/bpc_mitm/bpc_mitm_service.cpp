@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX, Reisyukaku, D3fau4
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,23 +13,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <mutex>
-#include <switch.h>
-#include <stratosphere.hpp>
 #include "bpc_mitm_service.hpp"
-#include "bpcmitm_reboot_manager.hpp"
+#include "bpc_ams_power_utils.hpp"
 
-void BpcMitmService::PostProcess(IMitmServiceObject *obj, IpcResponseContext *ctx) {
-    /* Nothing to do here */
-}
+namespace ams::mitm::bpc {
 
-Result BpcMitmService::ShutdownSystem() {
-    /* Use exosphere + reboot to perform real shutdown, instead of fake shutdown. */
-    PerformShutdownSmc();
-    return ResultSuccess;
-}
+    Result BpcMitmService::RebootSystem() {
+        R_UNLESS(bpc::IsRebootManaged(), sm::mitm::ResultShouldForwardToSession());
+        bpc::RebootSystem();
+        return ResultSuccess();
+    }
 
-Result BpcMitmService::RebootSystem() {
-    return BpcRebootManager::PerformReboot();
+    Result BpcMitmService::ShutdownSystem() {
+        bpc::ShutdownSystem();
+        return ResultSuccess();
+    }
+
 }

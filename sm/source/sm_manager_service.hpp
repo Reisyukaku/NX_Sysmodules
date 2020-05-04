@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 Atmosphère-NX
+ * Copyright (c) 2018-2020 Atmosphère-NX
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,33 +13,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 #pragma once
-#include <switch.h>
 #include <stratosphere.hpp>
-#include "sm_types.hpp"
 
-enum ManagerServiceCmd {
-    Manager_Cmd_RegisterProcess = 0,
-    Manager_Cmd_UnregisterProcess = 1,
-    
-    Manager_Cmd_AtmosphereEndInitDefers = 65000,
-    Manager_Cmd_AtmosphereHasMitm = 65001,
-};
+namespace ams::sm {
 
-class ManagerService final : public IServiceObject {
-    private:
-        /* Actual commands. */
-        virtual Result RegisterProcess(u64 pid, InBuffer<u8> acid_sac, InBuffer<u8> aci0_sac);
-        virtual Result UnregisterProcess(u64 pid);
-        virtual void AtmosphereEndInitDefers();
-        virtual void AtmosphereHasMitm(Out<bool> out, SmServiceName service);
-    public:
-        DEFINE_SERVICE_DISPATCH_TABLE {
-            MakeServiceCommandMeta<Manager_Cmd_RegisterProcess, &ManagerService::RegisterProcess>(),
-            MakeServiceCommandMeta<Manager_Cmd_UnregisterProcess, &ManagerService::UnregisterProcess>(),
-            
-            MakeServiceCommandMeta<Manager_Cmd_AtmosphereEndInitDefers, &ManagerService::AtmosphereEndInitDefers>(),
-            MakeServiceCommandMeta<Manager_Cmd_AtmosphereHasMitm, &ManagerService::AtmosphereHasMitm>(),
-        };
-};
+    /* Service definition. */
+    class ManagerService final : public sf::IServiceObject {
+        protected:
+            /* Command IDs. */
+            enum class CommandId {
+                RegisterProcess           = 0,
+                UnregisterProcess         = 1,
+
+                AtmosphereEndInitDefers   = 65000,
+                AtmosphereHasMitm         = 65001,
+                AtmosphereRegisterProcess = 65002,
+            };
+        private:
+            /* Actual commands. */
+            virtual Result RegisterProcess(os::ProcessId process_id, const sf::InBuffer &acid_sac, const sf::InBuffer &aci_sac);
+            virtual Result UnregisterProcess(os::ProcessId process_id);
+            virtual void AtmosphereEndInitDefers();
+            virtual void AtmosphereHasMitm(sf::Out<bool> out, ServiceName service);
+            virtual Result AtmosphereRegisterProcess(os::ProcessId process_id, ncm::ProgramId program_id, cfg::OverrideStatus override_status, const sf::InBuffer &acid_sac, const sf::InBuffer &aci_sac);
+        public:
+            DEFINE_SERVICE_DISPATCH_TABLE {
+                MAKE_SERVICE_COMMAND_META(RegisterProcess),
+                MAKE_SERVICE_COMMAND_META(UnregisterProcess),
+
+                MAKE_SERVICE_COMMAND_META(AtmosphereEndInitDefers),
+                MAKE_SERVICE_COMMAND_META(AtmosphereHasMitm),
+                MAKE_SERVICE_COMMAND_META(AtmosphereRegisterProcess),
+            };
+    };
+
+}

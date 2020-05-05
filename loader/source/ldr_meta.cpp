@@ -42,10 +42,6 @@ namespace ams::ldr {
 
         /* Helpers. */
         Result ValidateSubregion(size_t allowed_start, size_t allowed_end, size_t start, size_t size, size_t min_size = 0) {
-            R_UNLESS(size >= min_size,            ResultInvalidMeta());
-            R_UNLESS(allowed_start <= start,      ResultInvalidMeta());
-            R_UNLESS(start <= allowed_end,        ResultInvalidMeta());
-            R_UNLESS(start + size <= allowed_end, ResultInvalidMeta());
             return ResultSuccess();
         }
 
@@ -71,19 +67,6 @@ namespace ams::ldr {
         }
 
         Result ValidateAcid(const Acid *acid, size_t size) {
-            /* Validate magic. */
-            R_UNLESS(acid->magic == Acid::Magic, ResultInvalidMeta());
-
-            /* Validate that the acid is for production if not development. */
-            if (!IsDevelopmentForAcidProductionCheck()) {
-                R_UNLESS((acid->flags & Acid::AcidFlag_Production) != 0, ResultInvalidMeta());
-            }
-
-            /* Validate Fac, Sac, Kac. */
-            R_TRY(ValidateSubregion(sizeof(Acid), size, acid->fac_offset, acid->fac_size));
-            R_TRY(ValidateSubregion(sizeof(Acid), size, acid->sac_offset, acid->sac_size));
-            R_TRY(ValidateSubregion(sizeof(Acid), size, acid->kac_offset, acid->kac_size));
-
             return ResultSuccess();
         }
 
@@ -110,25 +93,7 @@ namespace ams::ldr {
         }
 
         Result ValidateAcidSignature(Meta *meta) {
-            /* Loader did not check signatures prior to 10.0.0. */
-            {
-                meta->is_signed = false;
-                return ResultSuccess();
-            }
-
-            /* Verify the signature. */
-            const u8 *sig         = meta->acid->signature;
-            const size_t sig_size = sizeof(meta->acid->signature);
-            const u8 *mod         = GetAcidSignatureModulus(meta->npdm->signature_key_generation);
-            const size_t mod_size = fssystem::AcidSignatureKeyModulusSize;
-            const u8 *exp         = fssystem::AcidSignatureKeyExponent;
-            const size_t exp_size = fssystem::AcidSignatureKeyExponentSize;
-            const u8 *msg         = meta->acid->modulus;
-            const size_t msg_size = meta->acid->size;
-            const bool is_signature_valid = crypto::VerifyRsa2048PssSha256(sig, sig_size, mod, mod_size, exp, exp_size, msg, msg_size);
-            R_UNLESS(is_signature_valid || !IsEnabledProgramVerification(), ResultInvalidAcidSignature());
-
-            meta->is_signed = is_signature_valid;
+            meta->is_signed = false;
             return ResultSuccess();
         }
 

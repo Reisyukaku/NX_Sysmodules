@@ -26,7 +26,7 @@ namespace ams::ldr {
         constexpr size_t NsoPatchesProtectedSize   = sizeof(NsoHeader);
         constexpr size_t NsoPatchesProtectedOffset = sizeof(NsoHeader);
 
-        constexpr const char * const LoaderSdMountName = "#amsldr-sdpatch";
+        constexpr const char * const LoaderSdMountName = "#rnxldr-sdpatch";
         static_assert(sizeof(LoaderSdMountName) <= fs::MountNameLengthMax);
 
         os::Mutex g_ldr_sd_lock(false);

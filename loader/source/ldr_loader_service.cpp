@@ -97,7 +97,7 @@ namespace ams::ldr {
     }
 
     Result LoaderService::SetEnabledProgramVerification(bool enabled) {
-        ldr::SetEnabledProgramVerification(enabled);
+        ldr::SetEnabledProgramVerification(false);
         return ResultSuccess();
     }
 
